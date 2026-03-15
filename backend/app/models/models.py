@@ -7,18 +7,16 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    role = Column(String, default="student")
-    files = relationship("File", back_populates="owner")
+    role = Column(String, default="admin")
 
 class File(Base):
     __tablename__ = "files"
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String)
     dept = Column(String)
-    semester = Column(Integer)
+    semester = Column(String)  # Changed to String for flexibility
     subject = Column(String)
     module = Column(Integer)
-    category = Column(String, default="note") # <-- NEW: "note" or "syllabus"
+    category = Column(String)
     file_path = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    owner = relationship("User", back_populates="files")
