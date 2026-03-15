@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hearix AI Voice Assistant</title>
+    <title>Hearix AI Assistant | KTU Project</title>
     <style>
         :root {
             --primary-bg: #121212;
@@ -11,12 +11,11 @@
             --text-color: #ffffff;
             --accent-color: #00e676;
             --error-color: #ff5252;
-            --table-border: #333;
         }
 
         body {
             margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: var(--primary-bg);
             color: var(--text-color);
             display: flex;
@@ -26,64 +25,61 @@
 
         .hidden { display: none !important; }
 
-        .page {
+        /* --- USER PAGE --- */
+        #user-page {
             display: flex;
             flex-direction: column;
             flex: 1;
-            padding: 20px;
-        }
-
-        /* --- USER PAGE --- */
-        #user-page {
             justify-content: center;
             align-items: center;
-            position: relative;
             cursor: pointer;
+            text-align: center;
         }
 
         .admin-link-btn {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: #333;
+            background: rgba(255,255,255,0.1);
             color: white;
             border: 1px solid rgba(255,255,255,0.3);
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
             cursor: pointer;
         }
 
         .mic-btn {
-            width: 140px;
-            height: 140px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             background-color: var(--secondary-bg);
-            border: 4px solid var(--accent-color);
+            border: 5px solid var(--accent-color);
             color: var(--accent-color);
-            font-size: 50px;
+            font-size: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto;
-            transition: all 0.3s ease;
+            transition: transform 0.2s;
         }
+
+        .mic-btn:active { transform: scale(0.9); }
 
         #ai-response-container {
             margin-top: 30px;
-            padding: 20px;
-            background: #2a2a2a;
-            border-radius: 12px;
-            max-width: 700px;
-            width: 90%;
+            padding: 25px;
+            background: #252525;
+            border-radius: 15px;
+            max-width: 80%;
+            width: 600px;
             text-align: left;
-            border-left: 5px solid var(--accent-color);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border-left: 6px solid var(--accent-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* --- ADMIN STYLES --- */
-        .admin-container {
-            max-width: 850px;
-            margin: 40px auto;
+        /* --- ADMIN PANEL --- */
+        .admin-box {
+            max-width: 600px;
+            margin: 50px auto;
             background: var(--secondary-bg);
             padding: 30px;
             border-radius: 12px;
@@ -92,202 +88,197 @@
         input, select {
             width: 100%;
             padding: 12px;
-            margin-top: 5px;
+            margin: 10px 0;
             background: #333;
             color: white;
-            border: none;
+            border: 1px solid #444;
             border-radius: 6px;
+            box-sizing: border-box;
         }
 
-        .primary-btn {
+        .btn {
+            width: 100%;
+            padding: 15px;
             background: var(--accent-color);
             color: black;
-            font-weight: bold;
-            padding: 15px;
             border: none;
             border-radius: 6px;
+            font-weight: bold;
             cursor: pointer;
-            width: 100%;
-            margin-top: 15px;
+            margin-top: 10px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid #444;
-            text-align: left;
-        }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div id="user-page" class="page" onclick="toggleVoice()" tabindex="0" onkeydown="handleKeyPress(event)">
-        <button class="admin-link-btn" onclick="event.stopPropagation(); navigateTo('admin-auth-page')">Admin Portal</button>
+    <div id="user-page" onclick="toggleVoice()" tabindex="0" onkeydown="handleKeyPress(event)">
+        <button class="admin-link-btn" onclick="event.stopPropagation(); navigateTo('admin-auth')">Admin Portal</button>
         
-        <div class="mic-container" style="text-align: center; width: 100%;">
-            <div class="mic-btn" id="voice-icon">🎤</div>
-            <p class="status-text" id="voice-status" style="font-size: 1.4rem; font-weight: bold; margin-top: 20px;">Tap to Speak</p>
-            
-            <center>
-                <div id="ai-response-container" class="hidden">
-                    <h4 style="margin: 0 0 10px 0; color: var(--accent-color);">Assistant Response:</h4>
-                    <p id="ai-response-text" style="margin: 0; line-height: 1.6;"></p>
-                </div>
-            </center>
+        <div class="mic-btn" id="voice-icon">🎤</div>
+        <h2 id="voice-status" style="margin-top: 25px;">Tap anywhere to speak</h2>
+        <p style="opacity: 0.5;">(Speak clearly: "Read the notes for SD")</p>
 
-            <p style="opacity: 0.5; margin-top: 20px;">Or press Spacebar</p>
+        <div id="ai-response-container" class="hidden">
+            <h4 style="margin: 0 0 10px 0; color: var(--accent-color); text-transform: uppercase; font-size: 0.8rem;">Assistant Output</h4>
+            <p id="ai-response-text" style="margin: 0; font-size: 1.1rem; line-height: 1.6;"></p>
         </div>
     </div>
 
-    <div id="admin-auth-page" class="page hidden">
-        <div class="admin-container" style="max-width: 400px;">
-            <button onclick="navigateTo('user-page')" style="background:none; color:var(--accent-color); border:none; cursor:pointer; margin-bottom:10px;">← Back</button>
-            <h2 id="auth-title">Admin Login</h2>
+    <div id="admin-auth" class="hidden" style="padding:20px;">
+        <div class="admin-box">
+            <button onclick="navigateTo('user-page')" style="background:none; color:var(--accent-color); border:none; cursor:pointer;">← Back</button>
+            <h2 id="auth-title">Login</h2>
             <input type="text" id="username" placeholder="Username">
             <input type="password" id="password" placeholder="Password">
-            <div id="login-section">
-                <button class="primary-btn" onclick="login()">Login</button>
-                <p onclick="toggleAuthMode()" style="text-align:center; cursor:pointer; margin-top:15px; font-size:0.9rem;">New here? Register</p>
-            </div>
-            <div id="signup-section" class="hidden">
-                <button class="primary-btn" onclick="signup()">Register</button>
-                <p onclick="toggleAuthMode()" style="text-align:center; cursor:pointer; margin-top:15px; font-size:0.9rem;">Have an account? Login</p>
-            </div>
+            <button class="btn" id="auth-btn" onclick="handleAuth()">Login</button>
+            <p onclick="toggleAuthMode()" style="text-align:center; cursor:pointer; margin-top:20px; font-size:0.9rem;">Switch Login/Register</p>
         </div>
     </div>
 
-    <div id="admin-dashboard-page" class="page hidden">
-        <div class="admin-container">
+    <div id="admin-dash" class="hidden" style="padding:20px;">
+        <div class="admin-box" style="max-width: 900px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>Admin Dashboard</h2>
-                <button onclick="logout()" style="background:var(--error-color); color:white; border:none; padding:8px 15px; border-radius:5px;">Logout</button>
+                <button onclick="logout()" style="background:var(--error-color); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Logout</button>
             </div>
 
-            <div style="background:#2a2a2a; padding:20px; border-radius:10px; margin-top:20px;">
-                <h3>Upload Document</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-                    <select id="upload-dept"><option value="CS">CS</option><option value="EC">EC</option></select>
-                    <input type="number" id="upload-sem" value="6" placeholder="Semester">
-                    <select id="upload-category"><option value="note">Note</option><option value="syllabus">Syllabus</option></select>
+            <div style="background:rgba(255,255,255,0.05); padding:20px; border-radius:10px; margin-top:20px;">
+                <h3>Upload New PDF</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <select id="up-dept"><option value="CS">CS (Computer Science)</option><option value="EC">EC</option></select>
+                    <input type="number" id="up-sem" value="6">
                 </div>
-                <input type="text" id="upload-sub" placeholder="Subject Name (e.g. Python)">
-                <input type="file" id="upload-file" accept=".pdf" style="margin-top:10px;">
-                <button class="primary-btn" onclick="uploadFile()">Upload PDF</button>
+                <input type="text" id="up-sub" placeholder="Subject Name (e.g. SD)">
+                <select id="up-cat"><option value="note">Study Note</option><option value="syllabus">Syllabus</option></select>
+                <input type="file" id="up-file" accept=".pdf">
+                <button class="btn" onclick="uploadFile()">Upload to Database</button>
             </div>
 
             <table id="files-table">
-                <thead><tr><th>Subject</th><th>Type</th><th>Dept</th><th>Sem</th><th>Action</th></tr></thead>
-                <tbody id="files-body"></tbody>
+                <thead><tr><th>Subject</th><th>Type</th><th>Sem</th><th>Action</th></tr></thead>
+                <tbody id="files-list"></tbody>
             </table>
         </div>
     </div>
 
     <script>
-        // CHANGE THIS TO YOUR RENDER URL
-        const API_BASE_URL = "https://hearix-backend.onrender.com"; 
-        let authToken = localStorage.getItem("token");
+        const API_BASE_URL = "https://hearix-backend.onrender.com";
+        let isLogin = true;
 
         function navigateTo(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('body > div:not(script)').forEach(d => d.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-            if(id === 'admin-dashboard-page') fetchFiles();
+            if(id === 'admin-dash') loadFiles();
         }
 
         function toggleAuthMode() {
-            document.getElementById('login-section').classList.toggle('hidden');
-            document.getElementById('signup-section').classList.toggle('hidden');
-            document.getElementById('auth-title').innerText = document.getElementById('login-section').classList.contains('hidden') ? "Register" : "Login";
+            isLogin = !isLogin;
+            document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register";
+            document.getElementById('auth-btn').innerText = isLogin ? "Login" : "Register";
         }
 
-        async function signup() {
-            const res = await fetch(`${API_BASE_URL}/auth/register`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({username: document.getElementById('username').value, password: document.getElementById('password').value, role: "admin"})
-            });
-            if(res.ok) { alert("Registered!"); toggleAuthMode(); }
-        }
-
-        async function login() {
-            const formData = new FormData();
-            formData.append('username', document.getElementById('username').value);
-            formData.append('password', document.getElementById('password').value);
-            const res = await fetch(`${API_BASE_URL}/auth/login`, { method: 'POST', body: formData });
-            if(res.ok) {
-                const data = await res.json();
-                authToken = data.access_token;
-                localStorage.setItem("token", authToken);
-                navigateTo('admin-dashboard-page');
-            } else { alert("Invalid Credentials"); }
-        }
-
-        function logout() { localStorage.removeItem("token"); navigateTo('user-page'); }
-
-        async function uploadFile() {
-            const formData = new FormData();
-            formData.append('dept', document.getElementById('upload-dept').value);
-            formData.append('sem', document.getElementById('upload-sem').value);
-            formData.append('sub', document.getElementById('upload-sub').value);
-            formData.append('category', document.getElementById('upload-category').value);
-            formData.append('module', 1);
-            formData.append('file', document.getElementById('upload-file').files[0]);
-
-            const res = await fetch(`${API_BASE_URL}/files/upload`, {
-                method: 'POST',
-                headers: {'Authorization': `Bearer ${authToken}`},
-                body: formData
-            });
-            if(res.ok) { alert("Uploaded!"); fetchFiles(); }
-        }
-
-        async function fetchFiles() {
-            const res = await fetch(`${API_BASE_URL}/files/search?dept=CS&semester=6`, {
-                headers: {'Authorization': `Bearer ${authToken}`}
-            });
-            if(res.ok) {
-                const files = await res.json();
-                const body = document.getElementById('files-body');
-                body.innerHTML = files.map(f => `<tr><td>${f.subject}</td><td>${f.category}</td><td>${f.dept}</td><td>${f.semester}</td><td><button onclick="deleteFile(${f.id})">Delete</button></td></tr>`).join('');
+        async function handleAuth() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const endpoint = isLogin ? 'auth/login' : 'auth/register';
+            
+            if(isLogin) {
+                const fd = new FormData(); fd.append('username', u); fd.append('password', p);
+                const res = await fetch(`${API_BASE_URL}/${endpoint}`, { method: 'POST', body: fd });
+                if(res.ok) {
+                    const d = await res.json();
+                    localStorage.setItem('token', d.access_token);
+                    navigateTo('admin-dash');
+                } else { alert("Auth Failed"); }
+            } else {
+                const res = await fetch(`${API_BASE_URL}/${endpoint}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: u, password: p, role: 'admin'})
+                });
+                if(res.ok) { alert("Registered!"); toggleAuthMode(); }
             }
         }
 
-        // --- VOICE LOGIC ---
-        let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.continuous = false;
+        function logout() { localStorage.removeItem('token'); navigateTo('user-page'); }
+
+        async function uploadFile() {
+            const fd = new FormData();
+            fd.append('dept', document.getElementById('up-dept').value);
+            fd.append('sem', document.getElementById('up-sem').value);
+            fd.append('sub', document.getElementById('up-sub').value);
+            fd.append('category', document.getElementById('up-cat').value);
+            fd.append('module', 1);
+            fd.append('file', document.getElementById('up-file').files[0]);
+
+            const res = await fetch(`${API_BASE_URL}/files/upload`, {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`},
+                body: fd
+            });
+            if(res.ok) { alert("Upload Successful"); loadFiles(); }
+        }
+
+        async function loadFiles() {
+            const res = await fetch(`${API_BASE_URL}/files/search?dept=CS&semester=6`, {
+                headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+            });
+            const d = await res.json();
+            document.getElementById('files-list').innerHTML = d.map(f => `
+                <tr><td>${f.subject}</td><td>${f.category}</td><td>S${f.semester}</td>
+                <td><button onclick="deleteFile(${f.id})" style="background:red; color:white; border:none; padding:5px; cursor:pointer;">Del</button></td></tr>
+            `).join('');
+        }
+
+        async function deleteFile(id) {
+            await fetch(`${API_BASE_URL}/files/${id}`, {
+                method: 'DELETE', headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+            });
+            loadFiles();
+        }
+
+        // --- SPEECH & AI LOGIC ---
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         let isListening = false;
 
-        function speak(text) {
+        function speak(t) {
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            window.speechSynthesis.speak(utterance);
+            const u = new SpeechSynthesisUtterance(t);
+            window.speechSynthesis.speak(u);
         }
 
         function toggleVoice() {
-            if (isListening) { recognition.stop(); return; }
+            if(isListening) return;
             isListening = true;
             document.getElementById('ai-response-container').classList.add('hidden');
             document.getElementById('voice-icon').style.backgroundColor = 'var(--error-color)';
             document.getElementById('voice-status').innerText = "Listening...";
-            speak("Listening");
+            speak("How can I help you?");
             recognition.start();
         }
 
-        recognition.onresult = async (event) => {
+        recognition.onresult = async (e) => {
             isListening = false;
             document.getElementById('voice-icon').style.backgroundColor = 'var(--secondary-bg)';
-            let transcript = event.results[0][0].transcript.toLowerCase();
-            document.getElementById('voice-status').innerText = `Searching: ${transcript}`;
+            let transcript = e.results[0][0].transcript.toLowerCase();
 
-            // CLEANING LOGIC
-            let reqCategory = transcript.includes("syllabus") ? "syllabus" : "note";
-            let sub = transcript.replace(/read/g, "").replace(/syllabus/g, "").replace(/notes/g, "").replace(/for/g, "").replace(/the/g, "").replace(/\bs\d\b/g, "").trim();
+            // ADVANCED CLEANING: Remove semester (S1-S8), "read", "notes", etc.
+            let cat = transcript.includes("syllabus") ? "syllabus" : "note";
+            let sub = transcript
+                .replace(/read/g, "")
+                .replace(/syllabus/g, "")
+                .replace(/notes/g, "")
+                .replace(/for/g, "")
+                .replace(/the/g, "")
+                .replace(/\bs[1-8]\b/g, "") // Removes s1, s2, s3... s8
+                .replace(/semester/g, "")
+                .trim();
 
-            const url = `${API_BASE_URL}/assistant/fetch-and-read?dept=CS&sem=6&sub=${encodeURIComponent(sub)}&category=${reqCategory}`;
+            document.getElementById('voice-status').innerText = `Searching: "${sub}"`;
+
+            const url = `${API_BASE_URL}/assistant/fetch-and-read?dept=CS&sem=6&sub=${encodeURIComponent(sub)}&category=${cat}`;
             
             try {
                 const res = await fetch(url);
@@ -296,14 +287,15 @@
                     document.getElementById('ai-response-container').classList.remove('hidden');
                     document.getElementById('ai-response-text').innerText = data.voice_response;
                     speak(data.voice_response);
+                    document.getElementById('voice-status').innerText = "Response found.";
                 } else {
-                    speak("Document not found.");
+                    speak("I couldn't find those notes in the database.");
+                    document.getElementById('voice-status').innerText = "Document not found.";
                 }
-            } catch (e) { speak("Server error."); }
+            } catch (err) { speak("Connection error."); }
         };
 
         recognition.onerror = () => { isListening = false; document.getElementById('voice-icon').style.backgroundColor = 'var(--secondary-bg)'; };
-
         function handleKeyPress(e) { if(e.code === 'Space') { e.preventDefault(); toggleVoice(); } }
     </script>
 </body>
