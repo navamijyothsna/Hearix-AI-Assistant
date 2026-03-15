@@ -6,23 +6,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-# Pre-download NLTK data required for text processing
+# Pre-download NLTK data
 try:
     nltk.download('punkt')
     nltk.download('punkt_tab')
 except Exception as e:
-    print(f"NLTK Download skipped/failed: {e}")
+    print(f"NLTK Download failed: {e}")
 
 from .database import engine, get_db
 from .models import models
+from .utils import auth # Ensure you have your auth.py for hashing
 from .services.pdf_service import PDFService
 
-# Initialize database tables
 models.Base.metadata.create_all(bind=engine)
+app = FastAPI()
 
-app = FastAPI(title="Hearix AI Assistant")
-
-# CORS Setup - Allows your Netlify frontend to talk to this Render backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,95 +29,72 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- AUTH ROUTES (Fixes your 404 error) ---
+@app.post("/auth/register")
+def register(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.username == username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username taken")
+    
+    hashed = auth.get_password_hash(password)
+    new_user = models.User(username=username, hashed_password=hashed, role="admin")
+    db.add(new_user)
+    db.commit()
+    return {"message": "User registered"}
+
+@app.post("/auth/login")
+def login(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.username == username).first()
+    if not db_user or not auth.verify_password(password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = auth.create_access_token(data={"sub": db_user.username})
+    return {"access_token": token, "token_type": "bearer"}
+
 # --- FILE UPLOAD ---
 @app.post("/files/upload")
 async def upload_file(
-    dept: str = Form(...), 
-    sem: str = Form(...), 
-    sub: str = Form(...), 
-    category: str = Form("note"),
-    file: UploadFile = File(...), 
-    db: Session = Depends(get_db)
+    dept: str = Form(...), sem: str = Form(...), sub: str = Form(...), 
+    category: str = Form("note"), file: UploadFile = File(...), db: Session = Depends(get_db)
 ):
-    # Ensure upload directory exists
     os.makedirs("uploads", exist_ok=True)
     file_path = os.path.join("uploads", file.filename)
-    
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
     new_file = models.File(
-        filename=file.filename,
-        dept=dept.upper(),
-        semester=str(sem).upper(), # Stores as '6' or 'S6'
-        subject=sub.lower().strip(),
-        category=category.lower(),
-        file_path=file_path
+        filename=file.filename, dept=dept.upper(), semester=str(sem).upper(),
+        subject=sub.lower().strip(), category=category.lower(), file_path=file_path
     )
     db.add(new_file)
     db.commit()
-    return {"message": "Upload successful"}
+    return {"message": "Success"}
 
-# --- SEARCH FILES (Admin Panel) ---
-@app.get("/files/search")
-def search_files(dept: str, semester: str, db: Session = Depends(get_db)):
-    # Standardize semester for search
-    sem_val = semester.upper().replace("S", "")
-    return db.query(models.File).filter(
-        models.File.dept == dept.upper(),
-        models.File.semester.in_([sem_val, f"S{sem_val}"])
-    ).all()
-
-# --- VOICE ASSISTANT: FETCH AND READ ---
+# --- VOICE ASSISTANT ---
 @app.get("/assistant/fetch-and-read")
 def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", db: Session = Depends(get_db)):
-    # 1. Standardize Semester (matches '6' and 'S6')
     sem_num = sem.upper().replace("S", "")
     sem_options = [sem_num, f"S{sem_num}"]
 
-    # 2. Clean the subject keywords from the voice transcript
-    # This prevents "s6", "notes", etc., from breaking the subject match
     raw_words = sub.lower().split()
     stop_words = {"s1","s2","s3","s4","s5","s6","s7","s8", "notes", "syllabus", "read", "for", "the", "semester"}
     keywords = [w for w in raw_words if w not in stop_words]
 
-    # 3. Build Query
     query = db.query(models.File).filter(
         models.File.dept == dept.upper(),
         models.File.semester.in_(sem_options),
         models.File.category == category.lower()
     )
 
-    # 4. Apply Fuzzy Keyword Matching
     if keywords:
         for word in keywords:
             query = query.filter(models.File.subject.ilike(f"%{word}%"))
     
-    target_file = query.first()
+    target = query.first()
 
-    if not target_file:
-        # LOGGING: Helpful to see in Render Logs if search fails
-        print(f"SEARCH FAILED -> Dept: {dept}, Sem: {sem_num}, Keywords: {keywords}, Cat: {category}")
-        raise HTTPException(status_code=404, detail="Document not found.")
+    if not target:
+        raise HTTPException(status_code=404, detail="Not Found")
 
-    # 5. Process PDF and Generate AI Summary
-    if not os.path.exists(target_file.file_path):
-        raise HTTPException(status_code=404, detail="File lost on server. Please re-upload.")
-
-    try:
-        raw_text = PDFService.extract_text(target_file.file_path)
-        summary = PDFService.chunk_and_summarize(raw_text, target_file.subject)
-        return {"voice_response": summary}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI Processing Error: {str(e)}")
-
-# --- DELETE FILE ---
-@app.delete("/files/{file_id}")
-def delete_file(file_id: int, db: Session = Depends(get_db)):
-    file = db.query(models.File).filter(models.File.id == file_id).first()
-    if file:
-        if os.path.exists(file.file_path):
-            os.remove(file.file_path)
-        db.delete(file)
-        db.commit()
-    return {"message": "Deleted"}
+    raw_text = PDFService.extract_text(target.file_path)
+    summary = PDFService.chunk_and_summarize(raw_text, target.subject)
+    return {"voice_response": summary}
