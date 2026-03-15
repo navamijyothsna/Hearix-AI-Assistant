@@ -1,9 +1,10 @@
 import PyPDF2
 from google import genai
+from app.config import settings
 
 # --- Configure the AI Model ---
 # ⚠️ REPLACE THIS WITH YOUR ACTUAL API KEY FROM GOOGLE AI STUDIO
-GEMINI_API_KEY = "AIzaSyAldSEqtgsT-h3XfAbGpp7enbojqJ1hdgY"
+client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 # Initialize the new GenAI client
 try:
