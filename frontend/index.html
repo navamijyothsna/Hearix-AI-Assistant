@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blind Voice Academic Assistant</title>
+    <style>
+        /* --- CSS STYLING --- */
+        :root {
+            --primary-bg: #121212;
+            --secondary-bg: #1e1e1e;
+            --text-color: #ffffff;
+            --accent-color: #00e676;
+            --error-color: #ff5252;
+            --table-border: #333;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .hidden { display: none !important; }
+
+        .page {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 20px;
+        }
+
+        /* --- 1. ACCESSIBLE USER PAGE STYLES --- */
+        #user-page {
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        #user-page:focus {
+            outline: 5px solid var(--accent-color);
+            outline-offset: -5px;
+        }
+
+        .admin-link-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: var(--text-color);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .mic-container {
+            text-align: center;
+            pointer-events: none;
+        }
+        
+        .mic-btn {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: var(--secondary-bg);
+            border: 4px solid var(--accent-color);
+            color: var(--accent-color);
+            font-size: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .status-text { 
+            margin-top: 30px; 
+            font-size: 1.5rem; 
+            font-weight: bold;
+        }
+        .instruction-text {
+            opacity: 0.6;
+            margin-top: 10px;
+        }
+
+        /* --- 2 & 3. ADMIN PAGES STYLES --- */
+        .admin-container {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            background-color: var(--secondary-bg);
+            padding: 30px;
+            border-radius: 10px;
+            margin-top: 50px;
+        }
+
+        h2 { text-align: center; margin-bottom: 20px; color: var(--accent-color); }
+        h3 { color: var(--text-color); border-bottom: 1px solid #333; padding-bottom: 10px;}
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; opacity: 0.8; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .primary-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .secondary-btn {
+            background: transparent;
+            color: var(--accent-color);
+            border: none;
+            cursor: pointer;
+            margin-top: 15px;
+            display: block;
+            width: 100%;
+            text-align: center;
+        }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--table-border);
+            margin-bottom: 20px;
+        }
+
+        .notes-table-container {
+            margin-top: 30px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--table-border);
+        }
+
+        th {
+            background-color: #333;
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .delete-btn {
+            background-color: var(--error-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="user-page" class="page" onclick="toggleVoice()" tabindex="0" onkeydown="handleKeyPress(event)">
+        <button class="admin-link-btn" onclick="event.stopPropagation(); navigateTo('admin-auth-page')">Admin Portal</button>
+        <div class="mic-container">
+            <div class="mic-btn" id="voice-icon">🎤</div>
+            <p class="status-text" id="voice-status">Tap anywhere to speak</p>
+            <p class="instruction-text">Or press the Spacebar</p>
+        </div>
+    </div>
+
+    <div id="admin-auth-page" class="page hidden">
+        <div class="admin-container" style="max-width: 500px;">
+            <div class="nav-bar">
+                <button class="secondary-btn" style="width:auto; margin:0;" onclick="navigateTo('user-page')">← Back to Voice</button>
+            </div>
+            <h2 id="auth-title">Admin Login</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <div id="login-section">
+                <button class="primary-btn" onclick="dummyLogin()">Sign In</button>
+                <button class="secondary-btn" onclick="toggleAuthMode()">Need an account? Sign Up</button>
+            </div>
+            <div id="signup-section" class="hidden">
+                <button class="primary-btn" onclick="dummySignup()">Create Account</button>
+                <button class="secondary-btn" onclick="toggleAuthMode()">Already have an account? Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-dashboard-page" class="page hidden">
+        <div class="admin-container">
+            <div class="nav-bar">
+                <h2 style="margin: 0;">Admin Dashboard</h2>
+                <button class="secondary-btn" style="width:auto; margin:0; color:var(--error-color);" onclick="logout()">Logout</button>
+            </div>
+
+            <h3>Upload Academic Documents</h3>
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label>Department</label>
+                    <select id="upload-dept">
+                        <option value="CS">Computer Science</option>
+                        <option value="EC">Electronics</option>
+                        <option value="ME">Mechanical</option>
+                        <option value="CE">Civil</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Semester (1-8)</label>
+                        <input type="number" id="upload-sem" min="1" max="8" value="6">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Module (1-6)</label>
+                        <input type="number" id="upload-module" min="1" max="6" value="1">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>File Type</label>
+                        <select id="upload-category">
+                            <option value="note">Course Notes</option>
+                            <option value="syllabus">Syllabus</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Subject Name</label>
+                    <input type="text" id="upload-sub" placeholder="e.g., Data Structures">
+                </div>
+                <div class="form-group">
+                    <label>PDF File</label>
+                    <input type="file" id="upload-file" accept=".pdf">
+                </div>
+                <button type="button" class="primary-btn" onclick="dummyUpload(event)">Upload File</button>
+            </div>
+
+            <div class="notes-table-container">
+                <h3>Uploaded Documents</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                     <select id="filter-dept" style="padding: 5px; background: #333; color: white; border: none; border-radius: 4px;">
+                        <option value="ALL">All Depts</option>
+                        <option value="CS">CS</option>
+                        <option value="EC">EC</option>
+                        <option value="ME">ME</option>
+                        <option value="CE">CE</option>
+                    </select>
+                    <select id="filter-sem" style="padding: 5px; background: #333; color: white; border: none; border-radius: 4px;">
+                        <option value="1">Sem 1</option>
+                        <option value="2">Sem 2</option>
+                        <option value="3">Sem 3</option>
+                        <option value="4">Sem 4</option>
+                        <option value="5">Sem 5</option>
+                        <option value="6" selected>Sem 6</option>
+                        <option value="7">Sem 7</option>
+                        <option value="8">Sem 8</option>
+                    </select>
+                    <button class="secondary-btn" style="margin:0; width:auto; padding: 5px 15px; border: 1px solid var(--accent-color);" onclick="renderTable()">Filter</button>
+                </div>
+
+                <table id="notes-table">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Subject</th>
+                            <th>Type</th>
+                            <th>Dept</th>
+                            <th>Sem</th>
+                            <th>Mod</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="notes-table-body">
+                    </tbody>
+                </table>
+                <div id="empty-table-msg" class="empty-state hidden">No documents found.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:8000";
+        let authToken = localStorage.getItem("admin_token");
+
+        let currentDept = null;
+        let currentSem = null;
+        let currentSub = null;
+        let currentModule = null; 
+        let currentCategory = null;
+
+        function navigateTo(pageId) {
+            document.getElementById('user-page').classList.add('hidden');
+            document.getElementById('admin-auth-page').classList.add('hidden');
+            document.getElementById('admin-dashboard-page').classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+            if (pageId === 'admin-dashboard-page') renderTable(); 
+        }
+
+        let isLoginMode = true;
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Admin Login" : "Admin Registration";
+            document.getElementById('login-section').classList.toggle('hidden', !isLoginMode);
+            document.getElementById('signup-section').classList.toggle('hidden', isLoginMode);
+        }
+
+        function logout() {
+            authToken = null;
+            localStorage.removeItem("admin_token");
+            navigateTo('user-page');
+        }
+
+        async function dummyLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const params = new URLSearchParams();
+            params.append('username', user);
+            params.append('password', pass);
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    localStorage.setItem("admin_token", authToken); 
+                    navigateTo('admin-dashboard-page');
+                } else { alert("Login failed!"); }
+            } catch (e) { alert("Server error."); }
+        }
+
+        async function dummySignup() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass, role: "admin" })
+                });
+                if (response.ok) { alert("Success! Sign in now."); toggleAuthMode(); }
+            } catch (e) { alert("Server error."); }
+        }
+
+        async function dummyUpload(event) {
+            if (event) event.preventDefault(); 
+            if (!authToken) return;
+
+            const dept = document.getElementById('upload-dept').value;
+            const sem = parseInt(document.getElementById('upload-sem').value, 10); 
+            const sub = document.getElementById('upload-sub').value;
+            const moduleNo = parseInt(document.getElementById('upload-module').value, 10); 
+            const category = document.getElementById('upload-category').value;
+            const fileInput = document.getElementById('upload-file');
+            
+            const formData = new FormData();
+            formData.append("dept", dept);
+            formData.append("sem", sem);
+            formData.append("sub", sub);
+            formData.append("module", moduleNo); 
+            formData.append("category", category);
+            formData.append("file", fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/files/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
+                });
+                if (response.ok) {
+                    alert("Uploaded!");
+                    document.getElementById('filter-dept').value = dept;
+                    document.getElementById('filter-sem').value = sem;
+                    renderTable(); 
+                }
+            } catch (e) { alert("Upload error."); }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm("Delete?")) return;
+            try {
+                await fetch(`${API_BASE_URL}/files/${fileId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                renderTable(); 
+            } catch (e) {}
+        }
+
+        async function renderTable() {
+            if (!authToken) return;
+            const searchDept = document.getElementById('filter-dept').value === "ALL" ? "CS" : document.getElementById('filter-dept').value; 
+            const searchSem = document.getElementById('filter-sem').value; 
+            try {
+                const response = await fetch(`${API_BASE_URL}/files/search?dept=${searchDept}&semester=${searchSem}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const tbody = document.getElementById('notes-table-body');
+                tbody.innerHTML = '';
+                if (response.ok) {
+                    const notes = await response.json();
+                    document.getElementById('notes-table').classList.remove('hidden');
+                    notes.forEach(note => {
+                        let color = note.category === 'syllabus' ? '#ff9800' : '#2196f3';
+                        tbody.innerHTML += `<tr>
+                            <td>${note.filename}</td>
+                            <td>${note.subject}</td>
+                            <td><span style="background:${color};padding:3px 8px;border-radius:10px;font-size:0.8em;color:white;font-weight:bold;">${note.category.toUpperCase()}</span></td>
+                            <td>${note.dept}</td><td>S${note.semester}</td><td>${note.category==='syllabus'?'-':'M'+note.module}</td>
+                            <td><button class="delete-btn" onclick="deleteFile(${note.id})">Delete</button></td>
+                        </tr>`;
+                    });
+                } else { document.getElementById('notes-table').classList.add('hidden'); }
+            } catch (e) { }
+        }
+
+        // --- SPEECH LOGIC (FIXED NLP) ---
+        const voiceIcon = document.getElementById('voice-icon');
+        const voiceStatus = document.getElementById('voice-status');
+        let isListening = false;
+
+        function speakFeedback(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = new SpeechRecognition();
+
+        recognition.onresult = async function(event) {
+            let transcript = event.results[0][0].transcript.toLowerCase();
+            isListening = false;
+            resetMicUI();
+            voiceStatus.innerText = `You: "${transcript}"`;
+            speakFeedback("Processing.");
+
+            let reqDept = currentDept || "CS"; 
+            if(transcript.includes("mechanical") || transcript.match(/\bmech\b/)) reqDept = "ME";
+            if(transcript.includes("electronics") || transcript.match(/\bec\b/)) reqDept = "EC";
+            
+            let reqSem = currentSem || 6; 
+            const semMatch = transcript.match(/semester\s*(\d)/) || transcript.match(/sem\s*(\d)/);
+            if (semMatch) reqSem = parseInt(semMatch[1]);
+
+            let reqModule = null;
+            const modMatch = transcript.match(/module\s*(\d)/);
+            if (modMatch) reqModule = parseInt(modMatch[1]);
+            else if (currentModule) reqModule = currentModule; 
+
+            let reqCategory = transcript.includes("syllabus") ? "syllabus" : (currentCategory || "note");
+            
+            // 🧠 ADVANCED SUBJECT CLEANING
+            let cleanTranscript = transcript
+                .replace(/for semester \d/g, "").replace(/semester \d/g, "").replace(/sem \d/g, "")
+                .replace(/\bs\d\b/g, "") // STRIPS "S6", "S5" prefixes
+                .replace(/module \d/g, "").replace(/of module \d/g, "").replace(/for module \d/g, "")
+                .replace(/the syllabus/g, "").replace(/syllabus for/g, "").replace(/syllabus of/g, "").replace(/syllabus/g, "")
+                .replace(/\s+/g, " ") 
+                .trim();
+
+            let reqSub = ""; 
+            let reqTopic = null;
+            let isTopicSearch = false;
+
+            if (cleanTranscript.includes("about") || cleanTranscript.includes("explain") || cleanTranscript.includes("what is") || cleanTranscript.includes("tell me")) {
+                isTopicSearch = true;
+                let complexMatch = cleanTranscript.match(/(?:about|explain|what is)\s+(.+?)\s+(?:in|from|of)\s+(.+?)$/);
+                if (complexMatch) {
+                    reqTopic = complexMatch[1].trim();
+                    reqSub = complexMatch[2].replace(/^the\s+/g, "").replace(/\s+notes$/g, "").trim();
+                } else {
+                    let simpleMatch = cleanTranscript.match(/(?:about|explain|what is)\s+(.+?)$/);
+                    if (simpleMatch) reqTopic = simpleMatch[1].trim();
+                }
+            } else {
+                reqSub = cleanTranscript.replace(/please/g, "").replace(/read/g, "").replace(/summarize/g, "").replace(/the notes for/g, "").replace(/notes for/g, "").replace(/the notes/g, "").replace(/notes/g, "").replace(/the /g, "").trim();
+            }
+
+            if (!reqSub) {
+                if (currentSub && (isTopicSearch || reqModule || reqCategory === "syllabus")) reqSub = currentSub;
+                else { speakFeedback("Specify subject."); return; }
+            }
+
+            currentDept = reqDept; currentSem = reqSem; currentSub = reqSub; currentModule = reqModule; currentCategory = reqCategory;
+
+            let apiURL = isTopicSearch 
+                ? `${API_BASE_URL}/assistant/read-topic?dept=${reqDept}&sem=${reqSem}&sub=${encodeURIComponent(reqSub)}&topic=${encodeURIComponent(reqTopic)}&category=${reqCategory}`
+                : `${API_BASE_URL}/assistant/fetch-and-read?dept=${reqDept}&sem=${reqSem}&sub=${encodeURIComponent(reqSub)}&category=${reqCategory}`;
+
+            if (reqModule && reqCategory === "note") apiURL += `&module=${reqModule}`;
+
+            try {
+                const response = await fetch(apiURL);
+                if (response.ok) {
+                    const data = await response.json();
+                    speakFeedback(data.voice_response); 
+                } else { speakFeedback("Document not found."); }
+            } catch (e) { speakFeedback("Server offline."); }
+        };
+
+        function resetMicUI() { voiceIcon.style.backgroundColor = "var(--secondary-bg)"; }
+        function toggleVoice() {
+            isListening = !isListening;
+            if (isListening) {
+                voiceIcon.style.backgroundColor = "#ff5252";
+                voiceStatus.innerText = "Listening...";
+                speakFeedback("Listening");
+                recognition.start(); 
+            } else { recognition.stop(); }
+        }
+        function handleKeyPress(e) { if (e.code === 'Space') { e.preventDefault(); toggleVoice(); } }
+        window.onload = () => { document.getElementById('user-page').focus(); };
+    </script>
+</body>
+</html>
