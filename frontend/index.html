@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blind Voice Academic Assistant</title>
+    <title>Hearix AI Voice Assistant</title>
     <style>
-        /* --- CSS STYLING --- */
         :root {
             --primary-bg: #121212;
             --secondary-bg: #1e1e1e;
@@ -34,18 +33,12 @@
             padding: 20px;
         }
 
-        /* --- 1. ACCESSIBLE USER PAGE STYLES --- */
+        /* --- USER PAGE --- */
         #user-page {
             justify-content: center;
             align-items: center;
             position: relative;
             cursor: pointer;
-            user-select: none;
-        }
-        
-        #user-page:focus {
-            outline: 5px solid var(--accent-color);
-            outline-offset: -5px;
         }
 
         .admin-link-btn {
@@ -53,22 +46,16 @@
             top: 20px;
             right: 20px;
             background: #333;
-            color: var(--text-color);
+            color: white;
             border: 1px solid rgba(255,255,255,0.3);
             padding: 10px 20px;
             border-radius: 20px;
             cursor: pointer;
-            z-index: 10;
         }
 
-        .mic-container {
-            text-align: center;
-            pointer-events: none;
-        }
-        
         .mic-btn {
-            width: 150px;
-            height: 150px;
+            width: 140px;
+            height: 140px;
             border-radius: 50%;
             background-color: var(--secondary-bg);
             border: 4px solid var(--accent-color);
@@ -78,126 +65,62 @@
             align-items: center;
             justify-content: center;
             margin: 0 auto;
-            box-shadow: 0 0 20px rgba(0, 230, 118, 0.2);
             transition: all 0.3s ease;
         }
-        
-        .status-text { 
-            margin-top: 30px; 
-            font-size: 1.5rem; 
-            font-weight: bold;
-        }
-        .instruction-text {
-            opacity: 0.6;
-            margin-top: 10px;
+
+        #ai-response-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            text-align: left;
+            border-left: 5px solid var(--accent-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
-        /* --- 2 & 3. ADMIN PAGES STYLES --- */
+        /* --- ADMIN STYLES --- */
         .admin-container {
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
-            background-color: var(--secondary-bg);
+            max-width: 850px;
+            margin: 40px auto;
+            background: var(--secondary-bg);
             padding: 30px;
-            border-radius: 10px;
-            margin-top: 50px;
+            border-radius: 12px;
         }
 
-        h2 { text-align: center; margin-bottom: 20px; color: var(--accent-color); }
-        h3 { color: var(--text-color); border-bottom: 1px solid #333; padding-bottom: 10px;}
-
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; opacity: 0.8; }
-        .form-group input, .form-group select {
+        input, select {
             width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background-color: #333;
+            padding: 12px;
+            margin-top: 5px;
+            background: #333;
             color: white;
-            box-sizing: border-box;
+            border: none;
+            border-radius: 6px;
         }
 
         .primary-btn {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--accent-color);
-            color: #000;
-            border: none;
-            border-radius: 5px;
+            background: var(--accent-color);
+            color: black;
             font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        
-        .secondary-btn {
-            background: transparent;
-            color: var(--accent-color);
+            padding: 15px;
             border: none;
+            border-radius: 6px;
             cursor: pointer;
-            margin-top: 15px;
-            display: block;
             width: 100%;
-            text-align: center;
-        }
-
-        .nav-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--table-border);
-            margin-bottom: 20px;
-        }
-
-        .notes-table-container {
-            margin-top: 30px;
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 20px;
-            overflow-x: auto;
+            margin-top: 15px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 20px;
         }
 
         th, td {
             padding: 12px;
+            border-bottom: 1px solid #444;
             text-align: left;
-            border-bottom: 1px solid var(--table-border);
-        }
-
-        th {
-            background-color: #333;
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-
-        tr:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 20px;
-            opacity: 0.6;
-            font-style: italic;
-        }
-
-        .delete-btn {
-            background-color: var(--error-color);
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        .delete-btn:hover {
-            background-color: #d32f2f;
         }
     </style>
 </head>
@@ -205,362 +128,183 @@
 
     <div id="user-page" class="page" onclick="toggleVoice()" tabindex="0" onkeydown="handleKeyPress(event)">
         <button class="admin-link-btn" onclick="event.stopPropagation(); navigateTo('admin-auth-page')">Admin Portal</button>
-        <div class="mic-container">
+        
+        <div class="mic-container" style="text-align: center; width: 100%;">
             <div class="mic-btn" id="voice-icon">🎤</div>
-            <p class="status-text" id="voice-status">Tap anywhere to speak</p>
-            <p class="instruction-text">Or press the Spacebar</p>
+            <p class="status-text" id="voice-status" style="font-size: 1.4rem; font-weight: bold; margin-top: 20px;">Tap to Speak</p>
+            
+            <center>
+                <div id="ai-response-container" class="hidden">
+                    <h4 style="margin: 0 0 10px 0; color: var(--accent-color);">Assistant Response:</h4>
+                    <p id="ai-response-text" style="margin: 0; line-height: 1.6;"></p>
+                </div>
+            </center>
+
+            <p style="opacity: 0.5; margin-top: 20px;">Or press Spacebar</p>
         </div>
     </div>
 
     <div id="admin-auth-page" class="page hidden">
-        <div class="admin-container" style="max-width: 500px;">
-            <div class="nav-bar">
-                <button class="secondary-btn" style="width:auto; margin:0;" onclick="navigateTo('user-page')">← Back to Voice</button>
-            </div>
+        <div class="admin-container" style="max-width: 400px;">
+            <button onclick="navigateTo('user-page')" style="background:none; color:var(--accent-color); border:none; cursor:pointer; margin-bottom:10px;">← Back</button>
             <h2 id="auth-title">Admin Login</h2>
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="username" placeholder="Enter username">
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="password" placeholder="Enter password">
-            </div>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
             <div id="login-section">
-                <button class="primary-btn" onclick="dummyLogin()">Sign In</button>
-                <button class="secondary-btn" onclick="toggleAuthMode()">Need an account? Sign Up</button>
+                <button class="primary-btn" onclick="login()">Login</button>
+                <p onclick="toggleAuthMode()" style="text-align:center; cursor:pointer; margin-top:15px; font-size:0.9rem;">New here? Register</p>
             </div>
             <div id="signup-section" class="hidden">
-                <button class="primary-btn" onclick="dummySignup()">Create Account</button>
-                <button class="secondary-btn" onclick="toggleAuthMode()">Already have an account? Sign In</button>
+                <button class="primary-btn" onclick="signup()">Register</button>
+                <p onclick="toggleAuthMode()" style="text-align:center; cursor:pointer; margin-top:15px; font-size:0.9rem;">Have an account? Login</p>
             </div>
         </div>
     </div>
 
     <div id="admin-dashboard-page" class="page hidden">
         <div class="admin-container">
-            <div class="nav-bar">
-                <h2 style="margin: 0;">Admin Dashboard</h2>
-                <button class="secondary-btn" style="width:auto; margin:0; color:var(--error-color);" onclick="logout()">Logout</button>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>Admin Dashboard</h2>
+                <button onclick="logout()" style="background:var(--error-color); color:white; border:none; padding:8px 15px; border-radius:5px;">Logout</button>
             </div>
 
-            <h3>Upload Academic Documents</h3>
-            <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <div class="form-group">
-                    <label>Department</label>
-                    <select id="upload-dept">
-                        <option value="CS">Computer Science</option>
-                        <option value="EC">Electronics</option>
-                        <option value="ME">Mechanical</option>
-                        <option value="CE">Civil</option>
-                    </select>
+            <div style="background:#2a2a2a; padding:20px; border-radius:10px; margin-top:20px;">
+                <h3>Upload Document</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                    <select id="upload-dept"><option value="CS">CS</option><option value="EC">EC</option></select>
+                    <input type="number" id="upload-sem" value="6" placeholder="Semester">
+                    <select id="upload-category"><option value="note">Note</option><option value="syllabus">Syllabus</option></select>
                 </div>
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label>Semester (1-8)</label>
-                        <input type="number" id="upload-sem" min="1" max="8" value="6">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>Module (1-6)</label>
-                        <input type="number" id="upload-module" min="1" max="6" value="1">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>File Type</label>
-                        <select id="upload-category">
-                            <option value="note">Course Notes</option>
-                            <option value="syllabus">Syllabus</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Subject Name</label>
-                    <input type="text" id="upload-sub" placeholder="e.g., Data Structures">
-                </div>
-                <div class="form-group">
-                    <label>PDF File</label>
-                    <input type="file" id="upload-file" accept=".pdf">
-                </div>
-                <button type="button" class="primary-btn" onclick="dummyUpload(event)">Upload File</button>
+                <input type="text" id="upload-sub" placeholder="Subject Name (e.g. Python)">
+                <input type="file" id="upload-file" accept=".pdf" style="margin-top:10px;">
+                <button class="primary-btn" onclick="uploadFile()">Upload PDF</button>
             </div>
 
-            <div class="notes-table-container">
-                <h3>Uploaded Documents</h3>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                     <select id="filter-dept" style="padding: 5px; background: #333; color: white; border: none; border-radius: 4px;">
-                        <option value="ALL">All Depts</option>
-                        <option value="CS">CS</option>
-                        <option value="EC">EC</option>
-                        <option value="ME">ME</option>
-                        <option value="CE">CE</option>
-                    </select>
-                    <select id="filter-sem" style="padding: 5px; background: #333; color: white; border: none; border-radius: 4px;">
-                        <option value="1">Sem 1</option>
-                        <option value="2">Sem 2</option>
-                        <option value="3">Sem 3</option>
-                        <option value="4">Sem 4</option>
-                        <option value="5">Sem 5</option>
-                        <option value="6" selected>Sem 6</option>
-                        <option value="7">Sem 7</option>
-                        <option value="8">Sem 8</option>
-                    </select>
-                    <button class="secondary-btn" style="margin:0; width:auto; padding: 5px 15px; border: 1px solid var(--accent-color);" onclick="renderTable()">Filter</button>
-                </div>
-
-                <table id="notes-table">
-                    <thead>
-                        <tr>
-                            <th>File Name</th>
-                            <th>Subject</th>
-                            <th>Type</th>
-                            <th>Dept</th>
-                            <th>Sem</th>
-                            <th>Mod</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="notes-table-body">
-                    </tbody>
-                </table>
-                <div id="empty-table-msg" class="empty-state hidden">No documents found.</div>
-            </div>
+            <table id="files-table">
+                <thead><tr><th>Subject</th><th>Type</th><th>Dept</th><th>Sem</th><th>Action</th></tr></thead>
+                <tbody id="files-body"></tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        const API_BASE_URL = "https://hearix-backend.onrender.com";
-        let authToken = localStorage.getItem("admin_token");
+        // CHANGE THIS TO YOUR RENDER URL
+        const API_BASE_URL = "https://hearix-backend.onrender.com"; 
+        let authToken = localStorage.getItem("token");
 
-        let currentDept = null;
-        let currentSem = null;
-        let currentSub = null;
-        let currentModule = null; 
-        let currentCategory = null;
-
-        function navigateTo(pageId) {
-            document.getElementById('user-page').classList.add('hidden');
-            document.getElementById('admin-auth-page').classList.add('hidden');
-            document.getElementById('admin-dashboard-page').classList.add('hidden');
-            document.getElementById(pageId).classList.remove('hidden');
-            if (pageId === 'admin-dashboard-page') renderTable(); 
+        function navigateTo(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            if(id === 'admin-dashboard-page') fetchFiles();
         }
 
-        let isLoginMode = true;
         function toggleAuthMode() {
-            isLoginMode = !isLoginMode;
-            document.getElementById('auth-title').innerText = isLoginMode ? "Admin Login" : "Admin Registration";
-            document.getElementById('login-section').classList.toggle('hidden', !isLoginMode);
-            document.getElementById('signup-section').classList.toggle('hidden', isLoginMode);
+            document.getElementById('login-section').classList.toggle('hidden');
+            document.getElementById('signup-section').classList.toggle('hidden');
+            document.getElementById('auth-title').innerText = document.getElementById('login-section').classList.contains('hidden') ? "Register" : "Login";
         }
 
-        function logout() {
-            authToken = null;
-            localStorage.removeItem("admin_token");
-            navigateTo('user-page');
+        async function signup() {
+            const res = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: document.getElementById('username').value, password: document.getElementById('password').value, role: "admin"})
+            });
+            if(res.ok) { alert("Registered!"); toggleAuthMode(); }
         }
 
-        async function dummyLogin() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            const params = new URLSearchParams();
-            params.append('username', user);
-            params.append('password', pass);
-            try {
-                const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: params
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    authToken = data.access_token;
-                    localStorage.setItem("admin_token", authToken); 
-                    navigateTo('admin-dashboard-page');
-                } else { alert("Login failed!"); }
-            } catch (e) { alert("Server error."); }
-        }
-
-        async function dummySignup() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            try {
-                const response = await fetch(`${API_BASE_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, password: pass, role: "admin" })
-                });
-                if (response.ok) { alert("Success! Sign in now."); toggleAuthMode(); }
-            } catch (e) { alert("Server error."); }
-        }
-
-        async function dummyUpload(event) {
-            if (event) event.preventDefault(); 
-            if (!authToken) return;
-
-            const dept = document.getElementById('upload-dept').value;
-            const sem = parseInt(document.getElementById('upload-sem').value, 10); 
-            const sub = document.getElementById('upload-sub').value;
-            const moduleNo = parseInt(document.getElementById('upload-module').value, 10); 
-            const category = document.getElementById('upload-category').value;
-            const fileInput = document.getElementById('upload-file');
-            
+        async function login() {
             const formData = new FormData();
-            formData.append("dept", dept);
-            formData.append("sem", sem);
-            formData.append("sub", sub);
-            formData.append("module", moduleNo); 
-            formData.append("category", category);
-            formData.append("file", fileInput.files[0]);
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/files/upload`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` },
-                    body: formData
-                });
-                if (response.ok) {
-                    alert("Uploaded!");
-                    document.getElementById('filter-dept').value = dept;
-                    document.getElementById('filter-sem').value = sem;
-                    renderTable(); 
-                }
-            } catch (e) { alert("Upload error."); }
+            formData.append('username', document.getElementById('username').value);
+            formData.append('password', document.getElementById('password').value);
+            const res = await fetch(`${API_BASE_URL}/auth/login`, { method: 'POST', body: formData });
+            if(res.ok) {
+                const data = await res.json();
+                authToken = data.access_token;
+                localStorage.setItem("token", authToken);
+                navigateTo('admin-dashboard-page');
+            } else { alert("Invalid Credentials"); }
         }
 
-        async function deleteFile(fileId) {
-            if (!confirm("Delete?")) return;
-            try {
-                await fetch(`${API_BASE_URL}/files/${fileId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                renderTable(); 
-            } catch (e) {}
+        function logout() { localStorage.removeItem("token"); navigateTo('user-page'); }
+
+        async function uploadFile() {
+            const formData = new FormData();
+            formData.append('dept', document.getElementById('upload-dept').value);
+            formData.append('sem', document.getElementById('upload-sem').value);
+            formData.append('sub', document.getElementById('upload-sub').value);
+            formData.append('category', document.getElementById('upload-category').value);
+            formData.append('module', 1);
+            formData.append('file', document.getElementById('upload-file').files[0]);
+
+            const res = await fetch(`${API_BASE_URL}/files/upload`, {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${authToken}`},
+                body: formData
+            });
+            if(res.ok) { alert("Uploaded!"); fetchFiles(); }
         }
 
-        async function renderTable() {
-            if (!authToken) return;
-            const searchDept = document.getElementById('filter-dept').value === "ALL" ? "CS" : document.getElementById('filter-dept').value; 
-            const searchSem = document.getElementById('filter-sem').value; 
-            try {
-                const response = await fetch(`${API_BASE_URL}/files/search?dept=${searchDept}&semester=${searchSem}`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                const tbody = document.getElementById('notes-table-body');
-                tbody.innerHTML = '';
-                if (response.ok) {
-                    const notes = await response.json();
-                    document.getElementById('notes-table').classList.remove('hidden');
-                    notes.forEach(note => {
-                        let color = note.category === 'syllabus' ? '#ff9800' : '#2196f3';
-                        tbody.innerHTML += `<tr>
-                            <td>${note.filename}</td>
-                            <td>${note.subject}</td>
-                            <td><span style="background:${color};padding:3px 8px;border-radius:10px;font-size:0.8em;color:white;font-weight:bold;">${note.category.toUpperCase()}</span></td>
-                            <td>${note.dept}</td><td>S${note.semester}</td><td>${note.category==='syllabus'?'-':'M'+note.module}</td>
-                            <td><button class="delete-btn" onclick="deleteFile(${note.id})">Delete</button></td>
-                        </tr>`;
-                    });
-                } else { document.getElementById('notes-table').classList.add('hidden'); }
-            } catch (e) { }
+        async function fetchFiles() {
+            const res = await fetch(`${API_BASE_URL}/files/search?dept=CS&semester=6`, {
+                headers: {'Authorization': `Bearer ${authToken}`}
+            });
+            if(res.ok) {
+                const files = await res.json();
+                const body = document.getElementById('files-body');
+                body.innerHTML = files.map(f => `<tr><td>${f.subject}</td><td>${f.category}</td><td>${f.dept}</td><td>${f.semester}</td><td><button onclick="deleteFile(${f.id})">Delete</button></td></tr>`).join('');
+            }
         }
 
-        // --- SPEECH LOGIC (FIXED NLP) ---
-        const voiceIcon = document.getElementById('voice-icon');
-        const voiceStatus = document.getElementById('voice-status');
+        // --- VOICE LOGIC ---
+        let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.continuous = false;
         let isListening = false;
 
-        function speakFeedback(text) {
+        function speak(text) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             window.speechSynthesis.speak(utterance);
         }
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = new SpeechRecognition();
+        function toggleVoice() {
+            if (isListening) { recognition.stop(); return; }
+            isListening = true;
+            document.getElementById('ai-response-container').classList.add('hidden');
+            document.getElementById('voice-icon').style.backgroundColor = 'var(--error-color)';
+            document.getElementById('voice-status').innerText = "Listening...";
+            speak("Listening");
+            recognition.start();
+        }
 
-        recognition.onresult = async function(event) {
-            let transcript = event.results[0][0].transcript.toLowerCase();
+        recognition.onresult = async (event) => {
             isListening = false;
-            resetMicUI();
-            voiceStatus.innerText = `You: "${transcript}"`;
-            speakFeedback("Processing.");
+            document.getElementById('voice-icon').style.backgroundColor = 'var(--secondary-bg)';
+            let transcript = event.results[0][0].transcript.toLowerCase();
+            document.getElementById('voice-status').innerText = `Searching: ${transcript}`;
 
-            let reqDept = currentDept || "CS"; 
-            if(transcript.includes("mechanical") || transcript.match(/\bmech\b/)) reqDept = "ME";
-            if(transcript.includes("electronics") || transcript.match(/\bec\b/)) reqDept = "EC";
+            // CLEANING LOGIC
+            let reqCategory = transcript.includes("syllabus") ? "syllabus" : "note";
+            let sub = transcript.replace(/read/g, "").replace(/syllabus/g, "").replace(/notes/g, "").replace(/for/g, "").replace(/the/g, "").replace(/\bs\d\b/g, "").trim();
+
+            const url = `${API_BASE_URL}/assistant/fetch-and-read?dept=CS&sem=6&sub=${encodeURIComponent(sub)}&category=${reqCategory}`;
             
-            let reqSem = currentSem || 6; 
-            const semMatch = transcript.match(/semester\s*(\d)/) || transcript.match(/sem\s*(\d)/);
-            if (semMatch) reqSem = parseInt(semMatch[1]);
-
-            let reqModule = null;
-            const modMatch = transcript.match(/module\s*(\d)/);
-            if (modMatch) reqModule = parseInt(modMatch[1]);
-            else if (currentModule) reqModule = currentModule; 
-
-            let reqCategory = transcript.includes("syllabus") ? "syllabus" : (currentCategory || "note");
-            
-            // 🧠 ADVANCED SUBJECT CLEANING
-            let cleanTranscript = transcript
-                .replace(/for semester \d/g, "").replace(/semester \d/g, "").replace(/sem \d/g, "")
-                .replace(/\bs\d\b/g, "") // STRIPS "S6", "S5" prefixes
-                .replace(/module \d/g, "").replace(/of module \d/g, "").replace(/for module \d/g, "")
-                .replace(/the syllabus/g, "").replace(/syllabus for/g, "").replace(/syllabus of/g, "").replace(/syllabus/g, "")
-                .replace(/\s+/g, " ") 
-                .trim();
-
-            let reqSub = ""; 
-            let reqTopic = null;
-            let isTopicSearch = false;
-
-            if (cleanTranscript.includes("about") || cleanTranscript.includes("explain") || cleanTranscript.includes("what is") || cleanTranscript.includes("tell me")) {
-                isTopicSearch = true;
-                let complexMatch = cleanTranscript.match(/(?:about|explain|what is)\s+(.+?)\s+(?:in|from|of)\s+(.+?)$/);
-                if (complexMatch) {
-                    reqTopic = complexMatch[1].trim();
-                    reqSub = complexMatch[2].replace(/^the\s+/g, "").replace(/\s+notes$/g, "").trim();
-                } else {
-                    let simpleMatch = cleanTranscript.match(/(?:about|explain|what is)\s+(.+?)$/);
-                    if (simpleMatch) reqTopic = simpleMatch[1].trim();
-                }
-            } else {
-                reqSub = cleanTranscript.replace(/please/g, "").replace(/read/g, "").replace(/summarize/g, "").replace(/the notes for/g, "").replace(/notes for/g, "").replace(/the notes/g, "").replace(/notes/g, "").replace(/the /g, "").trim();
-            }
-
-            if (!reqSub) {
-                if (currentSub && (isTopicSearch || reqModule || reqCategory === "syllabus")) reqSub = currentSub;
-                else { speakFeedback("Specify subject."); return; }
-            }
-
-            currentDept = reqDept; currentSem = reqSem; currentSub = reqSub; currentModule = reqModule; currentCategory = reqCategory;
-
-            let apiURL = isTopicSearch 
-                ? `${API_BASE_URL}/assistant/read-topic?dept=${reqDept}&sem=${reqSem}&sub=${encodeURIComponent(reqSub)}&topic=${encodeURIComponent(reqTopic)}&category=${reqCategory}`
-                : `${API_BASE_URL}/assistant/fetch-and-read?dept=${reqDept}&sem=${reqSem}&sub=${encodeURIComponent(reqSub)}&category=${reqCategory}`;
-
-            if (reqModule && reqCategory === "note") apiURL += `&module=${reqModule}`;
-
             try {
-                const response = await fetch(apiURL);
-                if (response.ok) {
-                    const data = await response.json();
-                    speakFeedback(data.voice_response); 
-                } else { speakFeedback("Document not found."); }
-            } catch (e) { speakFeedback("Server offline."); }
+                const res = await fetch(url);
+                const data = await res.json();
+                if(res.ok) {
+                    document.getElementById('ai-response-container').classList.remove('hidden');
+                    document.getElementById('ai-response-text').innerText = data.voice_response;
+                    speak(data.voice_response);
+                } else {
+                    speak("Document not found.");
+                }
+            } catch (e) { speak("Server error."); }
         };
 
-        function resetMicUI() { voiceIcon.style.backgroundColor = "var(--secondary-bg)"; }
-        function toggleVoice() {
-            isListening = !isListening;
-            if (isListening) {
-                voiceIcon.style.backgroundColor = "#ff5252";
-                voiceStatus.innerText = "Listening...";
-                speakFeedback("Listening");
-                recognition.start(); 
-            } else { recognition.stop(); }
-        }
-        function handleKeyPress(e) { if (e.code === 'Space') { e.preventDefault(); toggleVoice(); } }
-        window.onload = () => { document.getElementById('user-page').focus(); };
+        recognition.onerror = () => { isListening = false; document.getElementById('voice-icon').style.backgroundColor = 'var(--secondary-bg)'; };
+
+        function handleKeyPress(e) { if(e.code === 'Space') { e.preventDefault(); toggleVoice(); } }
     </script>
 </body>
 </html>
