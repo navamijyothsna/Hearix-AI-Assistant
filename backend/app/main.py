@@ -1,11 +1,19 @@
+import os
+import shutil
+import nltk
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from jose import JWTError, jwt
-import os
-import shutil
+
+# Download required NLTK data for sentence tokenization
+try:
+    nltk.download('punkt')
+    nltk.download('punkt_tab')
+except Exception as e:
+    print(f"NLTK Download Warning: {e}")
 
 from .database import engine, get_db
 from .models import models
@@ -14,10 +22,12 @@ from .utils import auth
 from .services.pdf_service import PDFService
 from .config import settings
 
+# Create database tables
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Voice Academic Chatbot")
+app = FastAPI(title="Hearix AI Academic Assistant")
 
+# CORS configuration for Netlify/Localhost
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -28,6 +38,7 @@ app.add_middleware(
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
+# --- AUTHENTICATION HELPER ---
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,6 +58,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+# --- AUTH ROUTES ---
 @app.post("/auth/register", response_model=schemas.UserOut)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
@@ -69,13 +81,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     token = auth.create_access_token(data={"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
+# --- FILE ROUTES ---
 @app.post("/files/upload")
 async def upload(
     dept: str = Form(...), 
     sem: int = Form(...), 
     sub: str = Form(...), 
     module: int = Form(...), 
-    category: str = Form("note"), # NEW FIELD
+    category: str = Form("note"),
     file: UploadFile = File(...), 
     current_user: models.User = Depends(get_current_user), 
     db: Session = Depends(get_db)
@@ -93,7 +106,7 @@ async def upload(
             semester=sem, 
             subject=sub, 
             module=module, 
-            category=category, # NEW FIELD
+            category=category,
             file_path=path, 
             owner_id=current_user.id
         )
@@ -103,8 +116,7 @@ async def upload(
         return {"message": "Upload successful", "file_id": new_file.id}
     except Exception as e:
         db.rollback() 
-        print(f"CRITICAL DATABASE ERROR DURING UPLOAD: {e}")
-        raise HTTPException(status_code=500, detail=f"Database error during upload: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/files/search", response_model=List[schemas.FileOut])
 def search_files(
@@ -125,36 +137,38 @@ def delete_file(file_id: int, current_user: models.User = Depends(get_current_us
     file_to_delete = db.query(models.File).filter(models.File.id == file_id).first()
     if not file_to_delete:
         raise HTTPException(status_code=404, detail="File not found")
-    try:
-        if os.path.exists(file_to_delete.file_path):
-            os.remove(file_to_delete.file_path)
-    except Exception as e:
-        print(f"Warning: Could not delete physical file: {e}")
+    if os.path.exists(file_to_delete.file_path):
+        os.remove(file_to_delete.file_path)
     db.delete(file_to_delete)
     db.commit()
-    return {"message": f"Successfully deleted {file_to_delete.subject}"}
+    return {"message": "Deleted successfully"}
 
-# --- UPDATED: VOICE ROUTES NOW SUPPORT SYLLABUS ---
+# --- VOICE ASSISTANT ROUTES (FIXED FOR 404 ISSUES) ---
 @app.get("/assistant/fetch-and-read")
 def fetch_and_read(
-    dept: str, sem: int, sub: str, module: Optional[int] = None, category: str = "note", # NEW FIELD
+    dept: str, sem: int, sub: str, module: Optional[int] = None, category: str = "note", 
     db: Session = Depends(get_db) 
 ):
+    # Fuzzy search using .ilike to handle speech-to-text variations
     query = db.query(models.File).filter(
         models.File.dept == dept, 
         models.File.semester == sem,
         models.File.subject.ilike(f"%{sub}%"),
-        models.File.category == category # Filter by Syllabus or Note
+        models.File.category == category
     )
     
-    # If it's a syllabus, ignore the module number
     if module and category == "note":
         query = query.filter(models.File.module == module)
         
     target_file = query.first()
     
     if not target_file:
-        raise HTTPException(status_code=404, detail="Notes not found.")
+        # Debug print for Render logs
+        print(f"SEARCH FAILED: Dept:{dept}, Sem:{sem}, Sub:{sub}, Cat:{category}")
+        raise HTTPException(status_code=404, detail="Document not found in database.")
+
+    if not os.path.exists(target_file.file_path):
+        raise HTTPException(status_code=404, detail="Physical PDF file missing from server storage.")
 
     raw_text = PDFService.extract_text(target_file.file_path)
     summary = PDFService.chunk_and_summarize(raw_text, target_file.subject)
@@ -162,14 +176,14 @@ def fetch_and_read(
 
 @app.get("/assistant/read-topic")
 def read_specific_topic(
-    dept: str, sem: int, sub: str, topic: str, module: Optional[int] = None, category: str = "note", # NEW FIELD
+    dept: str, sem: int, sub: str, topic: str, module: Optional[int] = None, category: str = "note", 
     db: Session = Depends(get_db) 
 ):
     query = db.query(models.File).filter(
         models.File.dept == dept, 
         models.File.semester == sem,
         models.File.subject.ilike(f"%{sub}%"),
-        models.File.category == category # Filter by Syllabus or Note
+        models.File.category == category
     )
     
     if module and category == "note":
@@ -178,7 +192,7 @@ def read_specific_topic(
     target_file = query.first()
     
     if not target_file:
-        raise HTTPException(status_code=404, detail="Notes not found.")
+        raise HTTPException(status_code=404, detail="Topic notes not found.")
 
     raw_text = PDFService.extract_text(target_file.file_path)
     topic_content = PDFService.extract_specific_topic(raw_text, topic)
