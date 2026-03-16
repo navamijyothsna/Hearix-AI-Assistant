@@ -68,7 +68,7 @@
         #transcript-container {
             margin-top: 20px;
             padding: 15px 25px;
-            background: rgba(0, 230, 118, 0.1); /* Light green tint */
+            background: rgba(0, 230, 118, 0.1);
             border: 1px solid var(--accent-color);
             border-radius: 10px;
             max-width: 80%;
@@ -298,14 +298,20 @@
             }
         }
 
-        // --- DYNAMIC SPEECH LOGIC ---
+        // --- DYNAMIC SPEECH LOGIC WITH ACCESSIBILITY AUDIO CUES ---
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         let isListening = false;
 
-        function speak(t) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(t);
-            window.speechSynthesis.speak(u);
+        function speak(text, callback) {
+            window.speechSynthesis.cancel(); // Stop any current speech
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // If a callback function is provided, run it exactly when the speech finishes
+            if (callback) {
+                utterance.onend = callback;
+            }
+            
+            window.speechSynthesis.speak(utterance);
         }
 
         function toggleVoice() {
@@ -315,21 +321,22 @@
             }
             isListening = true;
             
-            // Hide previous data and mute the computer so it doesn't interrupt you
-            window.speechSynthesis.cancel();
             document.getElementById('ai-response-container').classList.add('hidden');
             document.getElementById('transcript-container').classList.add('hidden');
-            
-            // Show listening state
             document.getElementById('voice-icon').style.backgroundColor = 'var(--error-color)';
-            document.getElementById('voice-status').innerText = "Listening... (Start speaking)";
-            
-            // Start microphone IMMEDIATELY without the computer talking first
-            try {
-                recognition.start();
-            } catch(e) {
-                console.error(e);
-            }
+            document.getElementById('voice-status').innerText = "Preparing Mic...";
+
+            // 1. Speak the alert FIRST
+            speak("Listening.", function() {
+                // 2. Start the microphone ONLY after "Listening" finishes playing.
+                // This completely prevents the echo feedback loop.
+                document.getElementById('voice-status').innerText = "Listening... (Start speaking)";
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.error(e);
+                }
+            });
         }
 
         recognition.onresult = async (e) => {
@@ -337,9 +344,12 @@
             document.getElementById('voice-icon').style.backgroundColor = 'var(--secondary-bg)';
             let transcript = e.results[0][0].transcript.toLowerCase();
 
-            // Display Input Transcript IMMEDIATELY
+            // Display Input Transcript
             document.getElementById('transcript-container').classList.remove('hidden');
             document.getElementById('transcript-text').innerText = `"${transcript}"`;
+
+            // Give the user an audio cue that we heard them and are searching
+            speak("Searching...");
 
             // 1. Extract Category
             let cat = transcript.includes("syllabus") ? "syllabus" : "note";
@@ -380,14 +390,16 @@
             }
         };
 
-        // Handle silence or microphone permissions issues gracefully
+        // Handle silence gracefully with audio feedback
         recognition.onerror = (event) => { 
             isListening = false; 
             document.getElementById('voice-icon').style.backgroundColor = 'var(--secondary-bg)'; 
             if(event.error === 'no-speech') {
                 document.getElementById('voice-status').innerText = "No speech detected. Tap to try again.";
+                speak("I didn't hear anything.");
             } else {
                 document.getElementById('voice-status').innerText = "Microphone error. Check permissions.";
+                speak("Microphone error.");
             }
         };
         
