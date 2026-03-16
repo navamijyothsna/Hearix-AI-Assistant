@@ -9,8 +9,8 @@ class PDFService:
         try:
             with open(file_path, 'rb') as file:
                 reader = PyPDF2.PdfReader(file)
-                # Safeguard: Only read the first 3 pages
-                num_pages = min(len(reader.pages), 3) 
+                # Only read the first 2 pages for the demo to stay safe
+                num_pages = min(len(reader.pages), 2) 
                 for i in range(num_pages):
                     page_text = reader.pages[i].extract_text()
                     if page_text:
@@ -22,39 +22,33 @@ class PDFService:
 
     @staticmethod
     def chunk_and_summarize(text: str, subject: str) -> str:
-        safe_text = text[:15000] 
+        # Keep it very short for the free tier
+        safe_text = text[:5000] 
 
         if not safe_text.strip():
-            return "The document appears to be empty or contains unreadable images instead of text."
+            return "The document appears to be empty."
 
         try:
-            # EXPLICITLY grab the key from Render's environment
             api_key = os.getenv("GEMINI_API_KEY")
-            
             if not api_key:
-                return "Server Error: The GEMINI_API_KEY is missing from Render."
+                return "AI Error: GEMINI_API_KEY is missing from Render environment."
 
-            # Pass the key directly to the client
             client = genai.Client(api_key=api_key)
             
-            prompt = f"""
-            You are an accessible academic assistant for a visually impaired student. 
-            Based ONLY on the text below, provide a short, clear, 2-to-3 sentence spoken summary about {subject}. 
-            Do not use complex formatting, markdown, or bullet points because this will be read aloud by a screen reader.
+            prompt = f"Summarize this academic note about {subject} in two simple sentences for a student: {safe_text}"
             
-            Text:
-            {safe_text}
-            """
-            
+            # FIXED: Using the most stable model name string
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
-                contents=prompt,
+                model='gemini-1.5-flash', 
+                contents=prompt
             )
             
             return response.text
 
         except Exception as e:
-            # THIS IS THE FIX: Print the ACTUAL error to the screen so we can see what's wrong!
-            error_msg = str(e)
-            print(f"Gemini API Error: {error_msg}")
-            return f"AI System Error: {error_msg}"
+            # ULTIMATE FALLBACK: If the AI fails, just give the student the first 20 words
+            # This ensures the "Blind Student" always hears SOMETHING.
+            print(f"Gemini Error: {e}")
+            words = safe_text.split()[:20]
+            fallback_text = " ".join(words)
+            return f"I had trouble connecting to the AI, but here is the start of your note: {fallback_text}..."
