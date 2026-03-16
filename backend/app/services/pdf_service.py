@@ -1,46 +1,55 @@
+import os
 import PyPDF2
 from google import genai
-from app.config import settings
-from fastapi import HTTPException
 
 class PDFService:
     @staticmethod
-    def get_client():
-        if not settings.GEMINI_API_KEY:
-            raise HTTPException(status_code=500, detail="GEMINI_API_KEY not found in server environment.")
-        try:
-            return genai.Client(api_key=settings.GEMINI_API_KEY)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"AI Init Error: {str(e)}")
-
-    @staticmethod
-    def extract_text(file_path):
+    def extract_text(file_path: str) -> str:
         text = ""
         try:
-            with open(file_path, "rb") as f:
-                reader = PyPDF2.PdfReader(f)
-                for page in reader.pages:
-                    text += page.extract_text() or ""
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                # Safeguard: Only read the first 3 pages to prevent 429 Token limits
+                num_pages = min(len(reader.pages), 3) 
+                for i in range(num_pages):
+                    page_text = reader.pages[i].extract_text()
+                    if page_text:
+                        text += page_text + "\n"
             return text
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"PDF Error: {str(e)}")
+            print(f"Error reading PDF: {e}")
+            return "Could not extract text from the PDF."
 
     @staticmethod
-    def chunk_and_summarize(text, subject):
-        client = PDFService.get_client()
-        prompt = f"You are a helpful academic assistant. Summarize these {subject} notes for a student: {text[:10000]}"
-        try:
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-            return response.text
-        except Exception as e:
-            return f"Error generating summary: {str(e)}"
+    def chunk_and_summarize(text: str, subject: str) -> str:
+        # Extra Safeguard: Hard cutoff at 15,000 characters (keeps it safely inside free tier)
+        safe_text = text[:15000] 
 
-    @staticmethod
-    def extract_specific_topic(text, topic):
-        client = PDFService.get_client()
-        prompt = f"Based on the following notes, explain the topic '{topic}' in simple terms: {text[:10000]}"
+        if not safe_text.strip():
+            return "The document appears to be empty or contains unreadable images instead of text."
+
         try:
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+            # Initialize the new Google GenAI client
+            # It automatically picks up the GEMINI_API_KEY from your Render environment variables
+            client = genai.Client()
+            
+            prompt = f"""
+            You are an accessible academic assistant for a visually impaired student. 
+            Based ONLY on the text below, provide a short, clear, 2-to-3 sentence spoken summary about {subject}. 
+            Do not use complex formatting, markdown, or bullet points because this will be read aloud by a screen reader.
+            
+            Text:
+            {safe_text}
+            """
+            
+            # Downgrade to 1.5-flash: It has much higher free tier limits than 2.0!
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=prompt,
+            )
+            
             return response.text
+
         except Exception as e:
-            return f"Error explaining topic: {str(e)}"
+            print(f"Gemini API Error: {e}")
+            return "I'm sorry, the document is too large for my current limits. Please upload a shorter document."
