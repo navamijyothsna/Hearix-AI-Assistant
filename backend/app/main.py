@@ -23,11 +23,13 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Hearix AI Assistant")
 
-# --- STRICT CORS SETUP FOR NETLIFY ---
+# --- STRICT CORS SETUP ---
 origins = [
     "https://storied-haupia-6da5b0.netlify.app", 
     "http://localhost:3000",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "http://127.0.0.1:5500", 
+    "http://localhost:5500"  
 ]
 
 app.add_middleware(
@@ -38,10 +40,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 🚨 DATABASE RESET ROUTE (Run this ONCE) 🚨 ---
+# --- 🚨 DATABASE RESET ROUTE (Run this ONCE if you get a 500 error) 🚨 ---
 @app.get("/reset-db")
 def reset_database(db: Session = Depends(get_db)):
-    # This will drop all old tables and recreate them with the new schema
     models.Base.metadata.drop_all(bind=engine)
     models.Base.metadata.create_all(bind=engine)
     return {"message": "Database successfully wiped and recreated with the new String format!"}
@@ -87,9 +88,14 @@ async def upload_file(
     db.commit()
     return {"message": "Success"}
 
+# NEW: Fetch ALL files for the dashboard
+@app.get("/files/all")
+def get_all_files(db: Session = Depends(get_db)):
+    return db.query(models.File).all()
+
+# Filter files by dept and sem
 @app.get("/files/search")
 def search_files(dept: str, semester: str, db: Session = Depends(get_db)):
-    # Handles both '6' and 'S6' gracefully
     sem_val = semester.upper().replace("S", "")
     return db.query(models.File).filter(
         models.File.dept == dept.upper(),

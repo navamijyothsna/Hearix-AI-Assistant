@@ -122,6 +122,27 @@
             font-size: 1rem;
         }
 
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .filter-bar input, .filter-bar select {
+            margin: 0;
+            padding: 10px;
+        }
+
+        .filter-bar .btn {
+            margin: 0;
+            padding: 10px 20px;
+            width: auto;
+        }
+
         table { width: 100%; margin-top: 20px; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
         th { color: var(--accent-color); }
@@ -175,11 +196,11 @@
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                     <div class="form-group">
                         <label>Department</label>
-                        <select id="up-dept" onchange="loadFiles()"><option value="CS">Computer Science (CS)</option><option value="EC">Electronics (EC)</option></select>
+                        <select id="up-dept"><option value="CS">Computer Science (CS)</option><option value="EC">Electronics (EC)</option></select>
                     </div>
                     <div class="form-group">
                         <label>Semester</label>
-                        <input type="number" id="up-sem" value="6" onchange="loadFiles()">
+                        <input type="number" id="up-sem" value="6" placeholder="e.g. 6">
                     </div>
                 </div>
 
@@ -201,7 +222,20 @@
                 <button class="btn" onclick="uploadFile()">Upload to Database</button>
             </div>
 
-            <h3 style="margin-top: 30px;">Uploaded Files</h3>
+            <h3 style="margin-top: 40px; margin-bottom: 0;">Uploaded Files</h3>
+            
+            <div class="filter-bar">
+                <span style="font-weight: bold; color: #aaa; font-size: 0.9rem;">Filter:</span>
+                <select id="filter-dept" style="width: auto;">
+                    <option value="">Select Dept...</option>
+                    <option value="CS">CS</option>
+                    <option value="EC">EC</option>
+                </select>
+                <input type="number" id="filter-sem" placeholder="Sem (e.g. 6)" style="width: 120px;">
+                <button class="btn" onclick="applyFilter()">Apply</button>
+                <button class="btn" onclick="loadAllFiles()" style="background: #555; color: white;">Clear / Show All</button>
+            </div>
+
             <table id="files-table">
                 <thead><tr><th>Subject</th><th>Type</th><th>Dept</th><th>Sem</th><th>Action</th></tr></thead>
                 <tbody id="files-list"></tbody>
@@ -216,12 +250,11 @@
         function navigateTo(id) {
             document.querySelectorAll('body > div:not(script)').forEach(d => d.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-            if(id === 'admin-dash') loadFiles();
+            if(id === 'admin-dash') loadAllFiles(); // Load ALL files by default
         }
 
         function toggleAuthMode() {
             isLogin = !isLogin;
-            // FIXED BUG: Now when isLogin is false, it correctly shows "Register"
             document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register New Admin";
             document.getElementById('auth-btn').innerText = isLogin ? "Login" : "Register";
         }
@@ -280,56 +313,81 @@
                 });
                 if(res.ok) { 
                     alert("✅ File Uploaded Successfully!"); 
-                    // Clear file input
                     document.getElementById('up-file').value = "";
                     document.getElementById('up-sub').value = "";
-                    loadFiles(); 
+                    loadAllFiles(); // Show all files after upload so you can see it
                 }
                 else { 
                     const errData = await res.json();
                     alert(`❌ Upload Failed: ${errData.detail || res.statusText}`); 
                 }
-            } catch (err) { alert(`❌ Upload Error: Could not connect to the backend server. Make sure Render is awake.`); }
+            } catch (err) { alert(`❌ Upload Error: Could not connect to the backend server.`); }
         }
 
-        async function loadFiles() {
+        // --- NEW: Load ALL files by default ---
+        async function loadAllFiles() {
             const token = localStorage.getItem('token');
             if(!token) return;
 
-            // Dynamically search based on what is currently selected in the form
-            const dept = document.getElementById('up-dept').value;
-            const sem = document.getElementById('up-sem').value || "6";
+            // Clear the filter inputs visually
+            document.getElementById('filter-dept').value = "";
+            document.getElementById('filter-sem').value = "";
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/files/all`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                renderTable(res);
+            } catch (err) { handleErrorDisplay(err); }
+        }
+
+        // --- NEW: Apply specific filter ---
+        async function applyFilter() {
+            const token = localStorage.getItem('token');
+            if(!token) return;
+
+            const dept = document.getElementById('filter-dept').value;
+            const sem = document.getElementById('filter-sem').value;
+
+            if(!dept || !sem) {
+                alert("Please select both a Department and a Semester to filter.");
+                return;
+            }
 
             try {
                 const res = await fetch(`${API_BASE_URL}/files/search?dept=${dept}&semester=${sem}`, {
                     headers: {'Authorization': `Bearer ${token}`}
                 });
-                if(res.ok) {
-                    const d = await res.json();
-                    const tableBody = document.getElementById('files-list');
-                    
-                    if(d.length === 0) {
-                        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#aaa;">No files found for ${dept} S${sem}.</td></tr>`;
-                        return;
-                    }
+                renderTable(res);
+            } catch (err) { handleErrorDisplay(err); }
+        }
 
-                    tableBody.innerHTML = d.map(f => `
-                        <tr>
-                            <td><strong>${f.subject.toUpperCase()}</strong></td>
-                            <td>${f.category.toUpperCase()}</td>
-                            <td>${f.dept}</td>
-                            <td>S${f.semester}</td>
-                            <td><button onclick="deleteFile(${f.id})" style="background:var(--error-color); color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Delete</button></td>
-                        </tr>
-                    `).join('');
-                } else {
-                    console.error("Failed to load files", res.status);
-                    document.getElementById('files-list').innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error loading files from server.</td></tr>`;
+        // Helper function to draw the table
+        async function renderTable(res) {
+            const tableBody = document.getElementById('files-list');
+            if(res.ok) {
+                const d = await res.json();
+                if(d.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#aaa;">No files found.</td></tr>`;
+                    return;
                 }
-            } catch (err) { 
-                console.error("Could not load files", err); 
-                document.getElementById('files-list').innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Connection error. Is the server running?</td></tr>`;
+                tableBody.innerHTML = d.map(f => `
+                    <tr>
+                        <td><strong>${f.subject.toUpperCase()}</strong></td>
+                        <td>${f.category.toUpperCase()}</td>
+                        <td>${f.dept}</td>
+                        <td>S${f.semester}</td>
+                        <td><button onclick="deleteFile(${f.id})" style="background:var(--error-color); color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Delete</button></td>
+                    </tr>
+                `).join('');
+            } else {
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error loading files from server.</td></tr>`;
             }
+        }
+
+        function handleErrorDisplay(err) {
+            console.error("Could not load files", err); 
+            document.getElementById('files-list').innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Connection error. Is the server running?</td></tr>`;
         }
 
         async function deleteFile(id) {
@@ -338,7 +396,7 @@
                     const res = await fetch(`${API_BASE_URL}/files/${id}`, {
                         method: 'DELETE', headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
                     });
-                    if(res.ok) { loadFiles(); }
+                    if(res.ok) { loadAllFiles(); }
                     else { alert("Failed to delete file."); }
                 } catch(err) { alert("Error deleting file."); }
             }
