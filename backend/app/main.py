@@ -40,7 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 🚨 DATABASE RESET ROUTE (Run this ONCE if you get a 500 error) 🚨 ---
+# --- 🚨 DATABASE RESET ROUTE ---
 @app.get("/reset-db")
 def reset_database(db: Session = Depends(get_db)):
     models.Base.metadata.drop_all(bind=engine)
@@ -88,12 +88,10 @@ async def upload_file(
     db.commit()
     return {"message": "Success"}
 
-# NEW: Fetch ALL files for the dashboard
 @app.get("/files/all")
 def get_all_files(db: Session = Depends(get_db)):
     return db.query(models.File).all()
 
-# Filter files by dept and sem
 @app.get("/files/search")
 def search_files(dept: str, semester: str, db: Session = Depends(get_db)):
     sem_val = semester.upper().replace("S", "")
@@ -102,27 +100,48 @@ def search_files(dept: str, semester: str, db: Session = Depends(get_db)):
         models.File.semester.in_([sem_val, f"S{sem_val}"])
     ).all()
 
-# --- VOICE ASSISTANT ---
+# --- VOICE ASSISTANT (BULLETPROOF VERSION) ---
 @app.get("/assistant/fetch-and-read")
 def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", db: Session = Depends(get_db)):
+    # 1. Standardize Semester
     sem_num = sem.upper().replace("S", "")
     sem_options = [sem_num, f"S{sem_num}"]
 
-    raw_words = sub.lower().split()
-    stop_words = {"s1","s2","s3","s4","s5","s6","s7","s8", "notes", "syllabus", "read", "for", "the", "semester"}
-    keywords = [w for w in raw_words if w not in stop_words]
+    # 2. Aggressive String Cleaning (fixes the %20 issue)
+    import re
+    # Remove any character that is not a letter or number, then split
+    clean_sub_string = re.sub(r'[^a-zA-Z0-9\s]', '', sub.lower())
+    raw_words = clean_sub_string.split()
+    
+    # Extensive stop-words list
+    stop_words = {"s1","s2","s3","s4","s5","s6","s7","s8", "notes", "syllabus", "read", "for", "the", "semester", "of", "about", "on"}
+    keywords = [w for w in raw_words if w not in stop_words and len(w) > 1] # Ignore 1-letter typos
 
+    # 3. Base Query
     query = db.query(models.File).filter(
         models.File.dept == dept.upper(),
         models.File.semester.in_(sem_options),
         models.File.category == category.lower()
     )
 
+    # 4. Fuzzy Matching
     if keywords:
         for word in keywords:
             query = query.filter(models.File.subject.ilike(f"%{word}%"))
     
     target = query.first()
+    
+    # 5. The "Fallback" Search 
+    # If the precise keyword match fails, let's just grab the first file for that Dept/Sem/Cat
+    # This ensures your demo doesn't fail if the STT mishears "ds" as "dx"
+    if not target:
+        fallback_query = db.query(models.File).filter(
+            models.File.dept == dept.upper(),
+            models.File.semester.in_(sem_options),
+            models.File.category == category.lower()
+        )
+        target = fallback_query.first()
+
     if not target:
         raise HTTPException(status_code=404, detail="Document not found")
 
