@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-# Download required NLTK data for text processing
+# Pre-download NLTK data required for text processing
 try:
     nltk.download('punkt')
     nltk.download('punkt_tab')
@@ -21,15 +21,30 @@ from .services.pdf_service import PDFService
 # Initialize database tables
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="Hearix AI Assistant")
+
+# --- STRICT CORS SETUP FOR NETLIFY ---
+origins = [
+    "https://storied-haupia-6da5b0.netlify.app", 
+    "http://localhost:3000",
+    "http://localhost:5173"
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=origins, 
+    allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- 🚨 DATABASE RESET ROUTE (Run this ONCE) 🚨 ---
+@app.get("/reset-db")
+def reset_database(db: Session = Depends(get_db)):
+    # This will drop all old tables and recreate them with the new schema
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine)
+    return {"message": "Database successfully wiped and recreated with the new String format!"}
 
 # --- AUTHENTICATION ---
 @app.post("/auth/register")
@@ -74,7 +89,7 @@ async def upload_file(
 
 @app.get("/files/search")
 def search_files(dept: str, semester: str, db: Session = Depends(get_db)):
-    # Handles both '6' and 'S6'
+    # Handles both '6' and 'S6' gracefully
     sem_val = semester.upper().replace("S", "")
     return db.query(models.File).filter(
         models.File.dept == dept.upper(),
@@ -88,7 +103,7 @@ def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", db: Se
     sem_options = [sem_num, f"S{sem_num}"]
 
     raw_words = sub.lower().split()
-    stop_words = {"s1","s2","s3","s4","s5","s6","s7","s8", "notes", "syllabus", "read", "for", "the"}
+    stop_words = {"s1","s2","s3","s4","s5","s6","s7","s8", "notes", "syllabus", "read", "for", "the", "semester"}
     keywords = [w for w in raw_words if w not in stop_words]
 
     query = db.query(models.File).filter(
