@@ -221,8 +221,9 @@
 
         function toggleAuthMode() {
             isLogin = !isLogin;
-            document.getElementById('auth-title').innerText = isLogin ? "Register New Admin" : "Login";
-            document.getElementById('auth-btn').innerText = isLogin ? "Register" : "Login";
+            // FIXED BUG: Now when isLogin is false, it correctly shows "Register"
+            document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register New Admin";
+            document.getElementById('auth-btn').innerText = isLogin ? "Login" : "Register";
         }
 
         async function handleAuth() {
