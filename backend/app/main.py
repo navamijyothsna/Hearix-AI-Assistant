@@ -100,40 +100,41 @@ def search_files(dept: str, semester: str, db: Session = Depends(get_db)):
         models.File.semester.in_([sem_val, f"S{sem_val}"])
     ).all()
 
-# --- VOICE ASSISTANT (BULLETPROOF VERSION) ---
+# --- VOICE ASSISTANT (BULLETPROOF VERSION 2.0) ---
 @app.get("/assistant/fetch-and-read")
 def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", db: Session = Depends(get_db)):
-    # 1. Standardize Semester
-    sem_num = sem.upper().replace("S", "")
+    
+    # 1. Clean the incoming Subject String extremely aggressively
+    # This prevents weird URL encoded characters like "%20" or "0" from ruining the search
+    import urllib.parse
+    import re
+    
+    decoded_sub = urllib.parse.unquote(sub) # Decode URL artifacts
+    clean_sub = re.sub(r'[^a-zA-Z\s]', '', decoded_sub.lower()) # KEEP ONLY LETTERS AND SPACES. Drops numbers like '0'.
+    
+    raw_words = clean_sub.split()
+    stop_words = {"s", "notes", "syllabus", "read", "for", "the", "semester", "of", "about", "on"}
+    keywords = [w for w in raw_words if w not in stop_words and len(w) > 1] 
+
+    # 2. Standardize Semester
+    sem_num = str(sem).upper().replace("S", "")
     sem_options = [sem_num, f"S{sem_num}"]
 
-    # 2. Aggressive String Cleaning (fixes the %20 issue)
-    import re
-    # Remove any character that is not a letter or number, then split
-    clean_sub_string = re.sub(r'[^a-zA-Z0-9\s]', '', sub.lower())
-    raw_words = clean_sub_string.split()
-    
-    # Extensive stop-words list
-    stop_words = {"s1","s2","s3","s4","s5","s6","s7","s8", "notes", "syllabus", "read", "for", "the", "semester", "of", "about", "on"}
-    keywords = [w for w in raw_words if w not in stop_words and len(w) > 1] # Ignore 1-letter typos
-
-    # 3. Base Query
+    # 3. Build Base Query
     query = db.query(models.File).filter(
         models.File.dept == dept.upper(),
         models.File.semester.in_(sem_options),
         models.File.category == category.lower()
     )
 
-    # 4. Fuzzy Matching
+    # 4. Search with cleaned keywords
     if keywords:
         for word in keywords:
             query = query.filter(models.File.subject.ilike(f"%{word}%"))
     
     target = query.first()
-    
-    # 5. The "Fallback" Search 
-    # If the precise keyword match fails, let's just grab the first file for that Dept/Sem/Cat
-    # This ensures your demo doesn't fail if the STT mishears "ds" as "dx"
+
+    # 5. Fallback: If specific search fails, just grab ANY file matching Dept, Sem, and Cat
     if not target:
         fallback_query = db.query(models.File).filter(
             models.File.dept == dept.upper(),
@@ -142,12 +143,25 @@ def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", db: Se
         )
         target = fallback_query.first()
 
+    # 6. Final Check: Does it exist in DB?
     if not target:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="Document not found in Database")
 
-    raw_text = PDFService.extract_text(target.file_path)
-    summary = PDFService.chunk_and_summarize(raw_text, target.subject)
-    return {"voice_response": summary}
+    # 7. CRASH PREVENTION: Did Render delete the physical file while sleeping?
+    if not os.path.exists(target.file_path):
+        # Delete the ghost record from the database so it stops causing errors
+        db.delete(target)
+        db.commit()
+        raise HTTPException(status_code=404, detail="File deleted by server sleep. Please re-upload.")
+
+    # 8. Process PDF
+    try:
+        raw_text = PDFService.extract_text(target.file_path)
+        summary = PDFService.chunk_and_summarize(raw_text, target.subject)
+        return {"voice_response": summary}
+    except Exception as e:
+        print(f"AI/PDF Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to read or summarize the PDF.")
 
 @app.delete("/files/{file_id}")
 def delete_file(file_id: int, db: Session = Depends(get_db)):
