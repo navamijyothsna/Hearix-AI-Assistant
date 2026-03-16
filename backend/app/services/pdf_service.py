@@ -9,7 +9,7 @@ class PDFService:
         try:
             with open(file_path, 'rb') as file:
                 reader = PyPDF2.PdfReader(file)
-                # Safeguard: Only read the first 3 pages to prevent 429 Token limits
+                # Safeguard: Only read the first 3 pages
                 num_pages = min(len(reader.pages), 3) 
                 for i in range(num_pages):
                     page_text = reader.pages[i].extract_text()
@@ -22,16 +22,20 @@ class PDFService:
 
     @staticmethod
     def chunk_and_summarize(text: str, subject: str) -> str:
-        # Extra Safeguard: Hard cutoff at 15,000 characters (keeps it safely inside free tier)
         safe_text = text[:15000] 
 
         if not safe_text.strip():
             return "The document appears to be empty or contains unreadable images instead of text."
 
         try:
-            # Initialize the new Google GenAI client
-            # It automatically picks up the GEMINI_API_KEY from your Render environment variables
-            client = genai.Client()
+            # EXPLICITLY grab the key from Render's environment
+            api_key = os.getenv("GEMINI_API_KEY")
+            
+            if not api_key:
+                return "Server Error: The GEMINI_API_KEY is missing from Render."
+
+            # Pass the key directly to the client
+            client = genai.Client(api_key=api_key)
             
             prompt = f"""
             You are an accessible academic assistant for a visually impaired student. 
@@ -42,7 +46,6 @@ class PDFService:
             {safe_text}
             """
             
-            # Downgrade to 1.5-flash: It has much higher free tier limits than 2.0!
             response = client.models.generate_content(
                 model='gemini-1.5-flash',
                 contents=prompt,
@@ -51,5 +54,7 @@ class PDFService:
             return response.text
 
         except Exception as e:
-            print(f"Gemini API Error: {e}")
-            return "I'm sorry, the document is too large for my current limits. Please upload a shorter document."
+            # THIS IS THE FIX: Print the ACTUAL error to the screen so we can see what's wrong!
+            error_msg = str(e)
+            print(f"Gemini API Error: {error_msg}")
+            return f"AI System Error: {error_msg}"
