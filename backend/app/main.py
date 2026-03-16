@@ -4,19 +4,16 @@ import nltk
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List
 
 from .database import engine, get_db
 from .models import models
 from .utils import auth 
 from .services.pdf_service import PDFService
 
-# Initialize tables
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# Allow Netlify and Localhost
 origins = [
     "https://storied-haupia-6da5b0.netlify.app",
     "http://localhost:3000",
@@ -31,11 +28,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# --- DEBUG ROUTE: Use this to see what is in your DB ---
-@app.get("/debug/files")
-def list_all_files(db: Session = Depends(get_db)):
-    return db.query(models.File).all()
 
 @app.get("/reset-db")
 def reset_database(db: Session = Depends(get_db)):
@@ -55,25 +47,18 @@ def register(username: str = Form(...), password: str = Form(...), db: Session =
 def login(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == username).first()
     if not db_user or not auth.verify_password(password, db_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401)
     token = auth.create_access_token(data={"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
 @app.post("/files/upload")
-async def upload_file(
-    dept: str = Form(...), 
-    sem: str = Form(...), 
-    sub: str = Form(...), 
-    category: str = Form(...), 
-    file: UploadFile = File(...), 
-    db: Session = Depends(get_db)
-):
+async def upload_file(dept: str = Form(...), sem: str = Form(...), sub: str = Form(...), category: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
     os.makedirs("uploads", exist_ok=True)
     file_path = os.path.join("uploads", file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # Store subject in lowercase for easier searching
+    # Store clean subject
     new_file = models.File(
         filename=file.filename, 
         dept=dept.upper(), 
@@ -92,23 +77,23 @@ def get_all(db: Session = Depends(get_db)):
 
 @app.get("/assistant/fetch-and-read")
 def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", db: Session = Depends(get_db)):
-    # Clean input
     clean_sem = str(sem).upper().replace("S", "").strip()
     clean_sub = sub.lower().strip()
     
-    # Fuzzy Search: Checks if the keyword is PART of the subject name
+    # IMPROVED SEARCH: Use ilike for case-insensitive partial matching
     target = db.query(models.File).filter(
         models.File.dept == dept.upper(),
         models.File.semester == clean_sem,
         models.File.category == category.lower(),
-        models.File.subject.contains(clean_sub) # Better than ==
+        models.File.subject.ilike(f"%{clean_sub}%")
     ).first()
 
+    # Fallback: Subject name mismatch aayal aa semester-le first file edukkum
     if not target:
-        # Final fallback: If subject name is slightly off, find ANY file for this dept/sem
         target = db.query(models.File).filter(
             models.File.dept == dept.upper(),
-            models.File.semester == clean_sem
+            models.File.semester == clean_sem,
+            models.File.category == category.lower()
         ).first()
 
     if not target or not os.path.exists(target.file_path):
