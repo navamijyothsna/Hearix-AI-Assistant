@@ -33,7 +33,7 @@ app.add_middleware(
 def reset_database(db: Session = Depends(get_db)):
     models.Base.metadata.drop_all(bind=engine)
     models.Base.metadata.create_all(bind=engine)
-    return {"message": "Database reset successfully"}
+    return {"message": "Database reset successfully!"}
 
 @app.post("/auth/register")
 def register(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -52,19 +52,25 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
     return {"access_token": token, "token_type": "bearer"}
 
 @app.post("/files/upload")
-async def upload_file(dept: str = Form(...), sem: str = Form(...), sub: str = Form(...), category: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_file(
+    dept: str = Form(...), 
+    sem: str = Form(...), 
+    sub: str = Form(...), 
+    category: str = Form(...), 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db)
+):
     os.makedirs("uploads", exist_ok=True)
     file_path = os.path.join("uploads", file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # Store clean subject
     new_file = models.File(
         filename=file.filename, 
-        dept=dept.upper(), 
-        semester=str(sem).upper().replace("S", ""), 
+        dept=dept.upper().strip(), 
+        semester=str(sem).upper().replace("S", "").strip(), 
         subject=sub.lower().strip(), 
-        category=category.lower(), 
+        category=category.lower().strip(), 
         file_path=file_path
     )
     db.add(new_file)
@@ -76,31 +82,51 @@ def get_all(db: Session = Depends(get_db)):
     return db.query(models.File).all()
 
 @app.get("/assistant/fetch-and-read")
-def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", db: Session = Depends(get_db)):
+def fetch_and_read(dept: str, sem: str, sub: str, category: str = "note", topic: str = "", db: Session = Depends(get_db)):
     clean_sem = str(sem).upper().replace("S", "").strip()
     clean_sub = sub.lower().strip()
     
-    # IMPROVED SEARCH: Use ilike for case-insensitive partial matching
-    target = db.query(models.File).filter(
+    # 1. Fetch ALL matching records for this Dept/Sem/Cat
+    targets = db.query(models.File).filter(
         models.File.dept == dept.upper(),
         models.File.semester == clean_sem,
-        models.File.category == category.lower(),
-        models.File.subject.ilike(f"%{clean_sub}%")
-    ).first()
+        models.File.category == category.lower()
+    ).all()
 
-    # Fallback: Subject name mismatch aayal aa semester-le first file edukkum
-    if not target:
-        target = db.query(models.File).filter(
+    valid_target = None
+
+    # 2. SELF-HEALING LOOP: Check if the file ACTUALLY exists on the server!
+    for t in targets:
+        if not os.path.exists(t.file_path):
+            # 🚨 GHOST FILE DETECTED! Automatically delete it from the DB
+            db.delete(t)
+            db.commit()
+            continue
+        
+        # If it physically exists, see if it matches the subject you spoke
+        if clean_sub in t.subject.lower():
+            valid_target = t
+            break
+    
+    # 3. Fallback: If no exact subject match, just pick the first VALID physical file
+    if not valid_target:
+        fallback_targets = db.query(models.File).filter(
             models.File.dept == dept.upper(),
             models.File.semester == clean_sem,
             models.File.category == category.lower()
-        ).first()
+        ).all()
+        
+        for ft in fallback_targets:
+            if os.path.exists(ft.file_path):
+                valid_target = ft
+                break
 
-    if not target or not os.path.exists(target.file_path):
-        raise HTTPException(status_code=404, detail="File not found")
+    # If everything fails, it means you need to upload a fresh file
+    if not valid_target:
+        raise HTTPException(status_code=404, detail="File deleted by server sleep. Please re-upload.")
 
-    raw_text = PDFService.extract_text(target.file_path)
-    summary = PDFService.chunk_and_summarize(raw_text, target.subject)
+    raw_text = PDFService.extract_text(valid_target.file_path)
+    summary = PDFService.chunk_and_summarize(raw_text, valid_target.subject, topic)
     return {"voice_response": summary}
 
 @app.delete("/files/{file_id}")
