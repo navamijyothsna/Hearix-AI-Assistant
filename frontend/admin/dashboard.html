@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hearix Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="header-bar">
+        <h2>Hearix Admin</h2>
+        <button id="logout-btn" style="width: auto; margin-bottom: 0;">Logout</button>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar: Syllabus Tree -->
+        <div class="glass-panel">
+            <h3>Syllabus Structure</h3>
+            <div id="syllabus-content">
+                <p>Loading...</p>
+            </div>
+        </div>
+
+        <!-- Main: Content Management -->
+        <div class="glass-panel">
+            <h3>Manage Content</h3>
+
+            <form id="create-folder-form"
+                style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--card-border);">
+                <h4>Create Semester / Subject / Module</h4>
+                <select id="parent-path">
+                    <option value="">Root (Create Semester)</option>
+                </select>
+                <input type="text" id="folder-name" placeholder="New Folder Name" required>
+                <button type="submit">Create Folder</button>
+                <span id="create-status" style="display:block; margin-top:0.5rem;"></span>
+            </form>
+
+            <form id="upload-form">
+                <h4>Upload Notes (.pdf)</h4>
+                <select id="upload-path" required>
+                    <option value="">Select Target Path (Semester/Subject/Module)</option>
+                </select>
+                <input type="file" id="pdf-file" accept=".pdf" required>
+                <button type="submit">Upload PDF</button>
+                <span id="upload-status" style="display:block; margin-top:0.5rem;"></span>
+            </form>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
