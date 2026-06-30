@@ -39,6 +39,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 class QueryRequest(BaseModel):
     document_name: str
     topic: str
+    exact_notes: bool = False
     
 class FolderRequest(BaseModel):
     name: str
@@ -150,6 +151,11 @@ def query_pdf(request: QueryRequest):
     if not relevant_sentences:
         return {"response": f"I couldn't find any information about {request.topic} in {target_file}."}
         
-    # Return up to 3 sentences to keep voice output manageable
-    response_text = ". ".join(relevant_sentences[:3]) + "."
+    if request.exact_notes:
+        # Return all relevant sentences if exact notes are requested (with a safety limit)
+        response_text = ". ".join(relevant_sentences[:20]) + "."
+    else:
+        # Return up to 3 sentences to keep voice output manageable
+        response_text = ". ".join(relevant_sentences[:3]) + "."
+        
     return {"response": response_text}

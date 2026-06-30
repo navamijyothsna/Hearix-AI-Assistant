@@ -12,6 +12,13 @@
 
 <body>
     <main id="app-container" tabindex="0" aria-label="Tap anywhere on the screen to start speaking">
+        <div id="controls" onclick="event.stopPropagation()">
+            <label class="switch-container">
+                <input type="checkbox" id="exact-notes-toggle">
+                <span class="slider"></span>
+                <span class="label-text">Exact Notes</span>
+            </label>
+        </div>
         <h1 id="status-text" aria-live="polite">Tap anywhere to speak</h1>
         <p id="feedback-text" aria-live="polite"></p>
     </main>

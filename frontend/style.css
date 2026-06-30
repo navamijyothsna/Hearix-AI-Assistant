@@ -68,3 +68,71 @@ body, html {
     50% { background-color: var(--pulse-color); }
     100% { background-color: var(--bg-color); }
 }
+
+#controls {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    z-index: 10;
+}
+
+.switch-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.switch-container:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+}
+
+.label-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color);
+    user-select: none;
+}
+
+/* Base toggle styles */
+.switch-container input {
+    display: none;
+}
+
+.slider {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    background-color: #30363d;
+    border-radius: 20px;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+

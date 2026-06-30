@@ -1,6 +1,7 @@
 const container = document.getElementById('app-container');
 const statusText = document.getElementById('status-text');
 const feedbackText = document.getElementById('feedback-text');
+const exactNotesToggle = document.getElementById('exact-notes-toggle');
 
 // Speech Recognition Setup
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -27,29 +28,29 @@ function speakOut(text) {
     }
     // Rule #3: Must append mandatory cue
     const finalUtterance = text + " " + MANDATORY_CUE;
-    
+
     statusText.innerText = "Speaking...";
     const utterance = new SpeechSynthesisUtterance(finalUtterance);
-    
+
     utterance.onend = () => {
         statusText.innerText = "Tap anywhere to speak";
     };
-    
+
     synth.speak(utterance);
     feedbackText.innerText = finalUtterance;
 }
 
 container.addEventListener('click', () => {
     if (!recognition) return;
-    
+
     if (synth.speaking) {
         synth.cancel(); // Stop talking if tapped
     }
-    
+
     statusText.innerText = "Listening...";
     feedbackText.innerText = "";
     container.classList.add('listening');
-    
+
     try {
         recognition.start();
     } catch (e) {
@@ -64,7 +65,7 @@ if (recognition) {
         container.classList.remove('listening');
         statusText.innerText = "Processing...";
         feedbackText.innerText = `You said: "${transcript}"`;
-        
+
         await processCommand(transcript);
     };
 
@@ -88,17 +89,17 @@ async function processCommand(transcript) {
     // Ensure "about" and "in" are present in that order
     let topic = "";
     let documentName = "";
-    
+
     if (transcript.includes("about") && transcript.includes("in")) {
         const afterAbout = transcript.split("about")[1]; // gets whatever is after 'about'
-        
+
         // Ensure "in" is actually after "about"
         if (afterAbout.includes("in")) {
-            const beforeIn = afterAbout.split("in")[0]; 
-            const afterIn = afterAbout.split("in")[1]; 
-            
+            const beforeIn = afterAbout.split("in")[0];
+            const afterIn = afterAbout.split("in")[1];
+
             topic = beforeIn.trim();
-            documentName = afterIn.trim().replace(".", ""); 
+            documentName = afterIn.trim().replace(".", "");
         } else {
             speakOut("Please say 'about' followed by the topic, and 'in' followed by the document name.");
             return;
@@ -107,12 +108,12 @@ async function processCommand(transcript) {
         speakOut("Please format your command like: 'read about topic in document'.");
         return;
     }
-    
+
     if (!topic || !documentName) {
         speakOut("I couldn't understand the topic or document from your command.");
         return;
     }
-    
+
     try {
         const response = await fetch('http://localhost:8000/query', {
             method: 'POST',
@@ -121,17 +122,18 @@ async function processCommand(transcript) {
             },
             body: JSON.stringify({
                 document_name: documentName,
-                topic: topic
+                topic: topic,
+                exact_notes: exactNotesToggle.checked
             })
         });
-        
+
         if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);
         }
-        
+
         const data = await response.json();
         speakOut(data.response);
-        
+
     } catch (error) {
         speakOut("Failed to reach the backend server.");
         console.error("Fetch error:", error);
