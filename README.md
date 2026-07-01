@@ -8,11 +8,11 @@ Hearix is a local-only AI voice assistant designed to help visually impaired eng
 
 This is a group mini project developed by a team of 5 members as part of our college mini project:
 
-* **Namratha Krishna B M**
-* **Navami Jyothsna**
-* **Saranya A**
-* **Vishnu S**
-* **Ajil R**
+* **Namratha Krishna B M**[GitHub](https://github.com/github-namrathakrishnabm)
+* **Navami Jyothsna**[GitHub](https://github.com/github-navamijyothsna)
+* **Saranya A**[GitHub](https://github.com/github-Saranya53430)
+* **Vishnu S**[GitHub](https://github.com/github-viishh0)
+* **Ajil R**[GitHub](https://github.com/github-username)
 
 ---
 
