@@ -10,8 +10,8 @@ This is a group mini project developed by a team of 5 members as part of our col
 
 * **Namratha Krishna B M**   [GitHub](https://github.com/namrathakrishnabm)
 * **Navami Jyothsna**   [GitHub](https://github.com/navamijyothsna)
-* **Saranya A**   [GitHub](https://github.com/github-Saranya53430)
-* **Vishnu S**   [GitHub](https://github.com/github-viishh0)
+* **Saranya A**   [GitHub](https://github.com/Saranya53430)
+* **Vishnu S**   [GitHub](https://github.com/viishh0)
 * **Ajil R**   [GitHub](https://github.com/github-username)
 
 ---
